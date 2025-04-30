@@ -177,7 +177,23 @@ bool act_is_thruster_x[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_IS_THRUSTER_X;
 bool act_is_thruster_x[INDI_NUM_ACT] = {0};
 #endif
 
+#ifdef STABILIZATION_INDI_ACT_IS_THRUSTER_Z
+bool act_is_thruster_z[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_IS_THRUSTER_Z;
+#else
 bool act_is_thruster_z[INDI_NUM_ACT];
+#endif
+
+#ifdef STABILIZATION_INDI_NUM_THRUSTERS
+int32_t num_thrusters = STABILIZATION_INDI_NUM_THRUSTERS;
+#else
+int32_t num_thrusters;
+#endif
+
+#ifdef STABILIZATION_INDI_NUM_THRUSTERS_X
+int32_t num_thrusters_x = STABILIZATION_INDI_NUM_THRUSTERS_X;
+#else
+int32_t num_thrusters_x;
+#endif
 
 #ifdef STABILIZATION_INDI_ACT_PREF
 // Preferred (neutral, least energy) actuator value
@@ -238,8 +254,8 @@ float mu2 = 0.002;
 float act_obs[INDI_NUM_ACT];
 
 // Number of actuators used to provide thrust
-int32_t num_thrusters;
-int32_t num_thrusters_x;
+//int32_t num_thrusters;
+//int32_t num_thrusters_x;
 
 static struct Int32Eulers stab_att_sp_euler;
 static struct Int32Quat   stab_att_sp_quat;
@@ -412,15 +428,25 @@ void stabilization_indi_init(void)
   float_vect_copy(g2_init, g2, INDI_NUM_ACT);
 
   // Assume all non-servos are delivering thrust
+  #ifndef STABILIZATION_INDI_NUM_THRUSTERS
   num_thrusters = INDI_NUM_ACT;
+  #endif
+  #ifndef STABILIZATION_INDI_NUM_THRUSTERS_X
   num_thrusters_x = 0;
+  #endif
   for (i = 0; i < INDI_NUM_ACT; i++) {
+    #ifndef STABILIZATION_INDI_NUM_THRUSTERS
     num_thrusters -= act_is_servo[i];
     num_thrusters -= act_is_thruster_x[i];
+    #endif
 
+    #ifndef STABILIZATION_INDI_NUM_THRUSTERS_X
     num_thrusters_x += act_is_thruster_x[i];
+    #endif
 
+    #ifndef STABILIZATION_INDI_ACT_IS_THRUSTER_Z
     act_is_thruster_z[i] = !act_is_servo[i] && !act_is_thruster_x[i];
+    #endif
   }
 
 #if PERIODIC_TELEMETRY
@@ -627,7 +653,7 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     v_thrust.x = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_X);
     v_thrust.y = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_Y);
     v_thrust.z = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_Z);
-
+    
     // Compute estimated thrust
     struct FloatVect3 thrust_filt = { 0.f, 0.f, 0.f };
     for (i = 0; i < INDI_NUM_ACT; i++) {
@@ -640,17 +666,22 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     VECT3_ADD(v_thrust, thrust_filt);
   } else {
     // build incremental thrust
+#if INDI_OUTPUTS == 5
+    float th_cmd_x = (float)th_sp_to_thrust_i(thrust, 0, THRUST_AXIS_X);
+#endif
     float th_cmd_z = (float)th_sp_to_thrust_i(thrust, 0, THRUST_AXIS_Z);
     for (i = 0; i < INDI_NUM_ACT; i++) {
       v_thrust.z += th_cmd_z * Bwls[3][i];
 #if INDI_OUTPUTS == 5
       // TODO set X thrust from RC in the thrust input setpoint
-      cmd[COMMAND_THRUST_X] = radio_control.values[RADIO_CONTROL_THRUST_X];
-      v_thrust.x += cmd[COMMAND_THRUST_X] * Bwls[4][i];
+      //cmd[COMMAND_THRUST_X] = radio_control.values[RADIO_CONTROL_THRUST_X];
+      //v_thrust.x += cmd[COMMAND_THRUST_X] * Bwls[4][i];
+      v_thrust.x += th_cmd_x * Bwls[4][i];
 #endif
     }
     v_thrust.y = 0.f;
   }
+
 
   // This term compensates for the spinup torque in the yaw axis
   float g2_times_u = float_vect_dot_product(g2, indi_u, INDI_NUM_ACT)/INDI_G_SCALING;
@@ -721,7 +752,7 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
   for (i = 0; i < INDI_NUM_ACT; i++) {
     cmd[COMMAND_THRUST] += actuator_state[i] * (int32_t) act_is_thruster_z[i];
   }
-  cmd[COMMAND_THRUST] /= num_thrusters;
+  cmd[COMMAND_THRUST] /= num_thrusters; // <------------------------ TODO: check this
 
 }
 

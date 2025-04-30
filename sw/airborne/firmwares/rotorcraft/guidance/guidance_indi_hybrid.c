@@ -599,14 +599,16 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   float thrust_vect[3];
 #if GUIDANCE_INDI_HYBRID_U > 3
   thrust_vect[0] = du_gih[3];
-  if (thrust_vect[0] > GUIDANCE_INDI_MAX_PUSHER_INCREMENT*g1g2[4][GUIDANCE_INDI_PUSHER_INDEX]) {
-    thrust_vect[0] = GUIDANCE_INDI_MAX_PUSHER_INCREMENT*g1g2[4][GUIDANCE_INDI_PUSHER_INDEX];
+  float max_pusher_thrust = get_max_pusher_thrust();
+  if (thrust_vect[0] > max_pusher_thrust) {
+    thrust_vect[0] = max_pusher_thrust;
   }
 #else
   thrust_vect[0] = 0;
 #endif
   thrust_vect[1] = 0;
-  thrust_vect[2] = euler_cmd.z;
+  thrust_vect[2] = -euler_cmd.z;
+  //printf("thrust_vect_z: %f\n", thrust_vect[2]); // FALTA PROBAR ESTO Y ANALIZAR
   // specific force not defined, return required increment
   thrust_sp = th_sp_from_incr_vect_f(thrust_vect);
 #endif
@@ -908,6 +910,12 @@ float WEAK guidance_indi_get_liftd(float airspeed, float theta) {
   //TODO: bound liftd
   return liftd;
 }
+
+#if GUIDANCE_INDI_HYBRID_U > 3
+float WEAK get_max_pusher_thrust() {
+  return GUIDANCE_INDI_MAX_PUSHER_INCREMENT*g1g2[4][GUIDANCE_INDI_PUSHER_INDEX];
+}
+#endif
 
 /**
  * ABI callback that obtains the velocity setpoint from a module
