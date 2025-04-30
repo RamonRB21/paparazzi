@@ -145,6 +145,7 @@ void control_mixing_heewing_attitude_direct_enter(void)
 {
   guidance_h_mode_changed(GUIDANCE_H_MODE_NONE);
   guidance_v_mode_changed(GUIDANCE_V_MODE_RC_DIRECT);
+  stabilization_mode_changed(STABILIZATION_MODE_NONE, STABILIZATION_ATT_SUBMODE_HEADING); // force mode change to always reset heading
   stabilization_mode_changed(STABILIZATION_MODE_ATTITUDE, STABILIZATION_ATT_SUBMODE_HEADING);
 }
 
@@ -171,7 +172,9 @@ void stabilization_indi_set_wls_settings(void)
 void control_mixing_heewing_attitude_plane_enter(void)
 {
   // don't use forward submode to avoid pitch offset on RC input
-  control_mixing_heewing_attitude_direct_enter();
+  guidance_h_mode_changed(GUIDANCE_H_MODE_NONE);
+  guidance_v_mode_changed(GUIDANCE_V_MODE_RC_DIRECT);
+  stabilization_mode_changed(STABILIZATION_MODE_ATTITUDE, STABILIZATION_ATT_SUBMODE_HEADING);
   stabilization_attitude_plane_pid_enter();
 }
 
@@ -245,6 +248,7 @@ void control_mixing_heewing_nav_run(void)
     } else {
       stabilization_attitude_plane_pid_run(transition_ratio < 0.8f ? false : autopilot_in_flight(), &stab_sp, &th_sp, stabilization.cmd);
     }
+    nav.heading = stateGetNedToBodyEulers_f()->psi; // overwrite nav heading to avoid problems when transition to hover
 
     commands[COMMAND_TILT] = command_from_transition(CMH_TILT_VERTICAL, CMH_TILT_FORWARD);
     commands[COMMAND_ROLL] = stabilization.cmd[COMMAND_ROLL];

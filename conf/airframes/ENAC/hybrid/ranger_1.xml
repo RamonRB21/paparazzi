@@ -20,6 +20,7 @@
       <module name="radio_control" type="sbus">
         <define name="RADIO_KILL_SWITCH" value="RADIO_GAIN1"/>
       </module>
+      <define name="INS_EKF2_MAG_ID" value="MAG_RM3100_SENDER_ID"/>
     </target>
 
     <target name="nps" board="pc">
@@ -60,6 +61,15 @@
     </module>
 
     <module name="board" type="tawaki_2.0"/>
+    <!--configure name="MAG_LIS3MDL_I2C_DEV" value="i2c2"/-->
+    <module name="mag" type="rm3100">
+      <configure name="MAG_RM3100_I2C_DEV" value="i2c2"/>
+      <define name="MODULE_RM3100_UPDATE_AHRS"    value="TRUE"/>
+      <!--define name="MODULE_RM3100_SYNC_SEND" value="TRUE"/-->
+      <define name="RM3100_CHAN_X" value="1"/>
+      <define name="RM3100_CHAN_Y" value="0"/>
+      <define name="RM3100_CHAN_X_SIGN" value="-"/>
+    </module>
 
     <module name="air_data">
       <!--define name="USE_AIRSPEED_AIR_DATA" value="TRUE"/-->
@@ -73,7 +83,8 @@
     <module name="guidance" type="indi"/>
     <module name="nav" type="hybrid"/>
 
-    <module name="ins" type="ekf2"/>
+    <module name="ins" type="ekf2">
+    </module>
     <!--module name="ins"/>
     <module name="ahrs" type="int_cmpl_quat"/-->
 
@@ -145,12 +156,24 @@
     </define>
     <define name="MAG_CALIB" type="array">
       <field type="struct">
+        <field name="abi_id" value="5"/>
+        <field name="calibrated" type="struct">
+          <field name="neutral" value="true"/>
+          <field name="scale" value="true"/>
+          <field name="rotation" value="false"/>
+        </field>
+        <field name="neutral" value="-135,-5,-136" type="int[]"/>
+        <field name="scale" value="{{39914,9671,10914},{63177,14873,17995}}"/>
+      </field>
+      <field type="struct">
         <field name="abi_id" value="3"/>
         <field name="calibrated" type="struct">
           <field name="neutral" value="true"/>
           <field name="scale" value="true"/>
-          <field name="rotation" value="true"/>
+          <field name="rotation" value="false"/>
         </field>
+        <!--field name="neutral" value="-3414,2416,-826" type="int[]"/>
+        <field name="scale" value="{{19909,4364,21663},{28395,6749,30542}}"/-->
         <field name="neutral" value="-397,-161,-5045" type="int[]"/>
         <field name="scale" value="{{51767,39473,6973},{59286,49477,8529}}"/>
         <field value="TAWAKIV2_MAG_ROT"/>
@@ -285,7 +308,7 @@
     <define name="THROTTLE_KP" value="0.1"/>
     <define name="THROTTLE_KD" value="0.1"/>
     <define name="THROTTLE_KI" value="0."/>
-    <define name="NOMINAL_THROTTLE" value="0.3"/>
+    <define name="NOMINAL_THROTTLE" value="0.5"/>
     <define name="PITCH_TRIM" value="2." unit="deg"/>
   </section>
 
@@ -295,7 +318,7 @@
     <define name="NAV_TAKEOFF_HEIGHT" value="10."/>
     <define name="NAV_LANDING_AF_HEIGHT" value="20."/>
     <define name="NAV_LANDING_FLARE_HEIGHT" value="10."/>
-    <define name="NAV_LANDING_DESCEND_SPEED" value="-1.0"/>
+    <define name="NAV_LANDING_DESCEND_SPEED" value="-2.0"/>
     <define name="SURVEY_HYBRID_MAX_SWEEP_BACK" value="1"/>
     <define name="MISSION_ALT_PROXIMITY" value="4."/>
     <define name="NAV_HYBRID_LINE_GAIN" value="0.8"/>
