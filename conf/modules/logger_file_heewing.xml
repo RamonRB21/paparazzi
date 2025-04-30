@@ -1,0 +1,23 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="logger_file_heewing" dir="loggers" task="core">
+  <doc>
+	<description>
+      Logs to a csv file.
+      (only for linux)
+    </description>
+    <define name="LOGGER_FILE_PATH" value="/home/ramon/Desktop/PaparazziUAV/simlogs" description="path where csv file is saved."/>
+    <configure name="LOGGER_FILE_FREQUENCY" value="PERIODIC_FREQUENCY" description="frequency of logging, defaults to PERIODIC_FREQUENCY."/>
+  </doc>
+  <header>
+	<file name="logger_file_heewing.h"/>
+  </header>
+  <init fun="logger_file_heewing_start()"/>
+  <periodic fun="logger_file_heewing_periodic()"
+		    stop="logger_file_heewing_stop()" autorun="TRUE" freq="LOGGER_FILE_FREQUENCY" />
+  <makefile>
+    <file name="logger_file_heewing.c"/>
+    <configure name="LOGGER_FILE_FREQUENCY" default="PERIODIC_FREQUENCY"/>
+    <define name="LOGGER_FILE_FREQUENCY" value="$(LOGGER_FILE_FREQUENCY)"/>
+  </makefile>
+</module>
