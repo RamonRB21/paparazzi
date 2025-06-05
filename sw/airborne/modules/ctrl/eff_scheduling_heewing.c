@@ -297,7 +297,8 @@ void calc_G1_G2(void)
   G1_T1[ESH_W][ESH_CMD_MOTORB]  = -0.57 * 1.7 * LIFT_EFF_MB / MASS;
   G2_T1[ESH_CMD_MOTORB]         =  0; //-T1.mB.dMdud / T1.I_ZZ;
   // Motor Mean Tilt
-  G1_T1[ESH_W][ESH_CMD_MOTORMT]  = -50 * T1.lift_eff_mt * (T1.mR.T * T1.tiltr.cosr + T1.mL.T * T1.tiltl.cosr) / MASS;
+  G1_T1[ESH_Q][ESH_CMD_MOTORMT]  = 0.2 * (T1.mR.T * T1.tiltr.sinr * T1.mR.dX + T1.mL.T * T1.tiltl.sinr * T1.mL.dX) / T1.I_YY;
+  G1_T1[ESH_W][ESH_CMD_MOTORMT]  = -T1.lift_eff_mt * (T1.mR.T * T1.tiltr.cosr + T1.mL.T * T1.tiltl.cosr) / MASS;
   G1_T1[ESH_U][ESH_CMD_MOTORMT]  = -T1.thrust_eff_mt * (T1.mR.T * T1.tiltr.sinr + T1.mL.T * T1.tiltl.sinr) / MASS;
   G2_T1[ESH_CMD_MOTORMT]         =  0; //T1.mR.dMdud / T1.I_ZZ;
   // Motor Tilt Diff
