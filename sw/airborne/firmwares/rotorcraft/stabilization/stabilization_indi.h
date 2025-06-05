@@ -62,6 +62,7 @@ extern void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetp
 extern void stabilization_indi_attitude_run(bool in_flight, struct StabilizationSetpoint *att_sp, struct ThrustSetpoint *thrust, int32_t *cmd);
 extern void stabilization_indi_set_wls_settings(void);
 extern void stabilization_indi_update_filt_freq(float freq); // setting handler
+extern void update_total_thrust(int32_t *cmd);
 
 #if !STABILIZATION_INDI_ALLOCATION_PSEUDO_INVERSE
 #include "math/wls/wls_alloc.h"

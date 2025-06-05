@@ -94,6 +94,7 @@
 #warning SetAutoCommandsFromRC not used: STAB_INDI writes actuators directly
 #endif
 
+float test_thrust_control = 0.0;
 
 #if !STABILIZATION_INDI_ALLOCATION_PSEUDO_INVERSE
 #if INDI_NUM_ACT > WLS_N_U_MAX
@@ -643,6 +644,13 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
 
   // calculate the virtual control (reference acceleration) based on a PD controller
   struct FloatRates rate_sp = stab_sp_to_rates_f(sp);
+
+  #if TEST_STAB_HEEWING
+    rate_sp.p = 0;
+    rate_sp.q = 0;
+    rate_sp.r = 0;
+  #endif
+
   angular_accel_ref.p = (rate_sp.p - rates_filt.p) * indi_gains.rate.p;
   angular_accel_ref.q = (rate_sp.q - rates_filt.q) * indi_gains.rate.q;
   angular_accel_ref.r = (rate_sp.r - rates_filt.r) * indi_gains.rate.r;
@@ -657,9 +665,9 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     // Compute estimated thrust
     struct FloatVect3 thrust_filt = { 0.f, 0.f, 0.f };
     for (i = 0; i < INDI_NUM_ACT; i++) {
-      thrust_filt.z += Bwls[3][i]* actuator_lowpass_filters[i].o[0] * (int32_t) act_is_thruster_z[i];
+      thrust_filt.z += Bwls[3][i]* actuator_lowpass_filters[i].o[0];// * (int32_t) act_is_thruster_z[i];
 #if INDI_OUTPUTS == 5
-      thrust_filt.x += Bwls[4][i]* actuator_lowpass_filters[i].o[0] * (int32_t) act_is_thruster_x[i];
+      thrust_filt.x += Bwls[4][i]* actuator_lowpass_filters[i].o[0];// * (int32_t) act_is_thruster_x[i];
 #endif
     }
     // Add the current estimated thrust to the increment
@@ -682,6 +690,11 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     v_thrust.y = 0.f;
   }
 
+  #if TEST_STAB_HEEWING
+    v_thrust.x = 0;
+    v_thrust.y = 0;
+    v_thrust.z = -1.0 * test_thrust_control;
+  #endif
 
   // This term compensates for the spinup torque in the yaw axis
   float g2_times_u = float_vect_dot_product(g2, indi_u, INDI_NUM_ACT)/INDI_G_SCALING;
@@ -745,15 +758,20 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
   /*Commit the actuator command*/
   for (i = 0; i < INDI_NUM_ACT; i++) {
     actuators_pprz[i] = (int16_t) indi_u[i];
+    //printf("act %d: %d | ", i, actuators_pprz[i]);
   }
+  //printf("\n");
 
   //update thrust command such that the current is correctly estimated
+  update_total_thrust(cmd);
+}
+
+void WEAK update_total_thrust(int32_t *cmd){
   cmd[COMMAND_THRUST] = 0;
-  for (i = 0; i < INDI_NUM_ACT; i++) {
+  for (uint8_t i = 0; i < INDI_NUM_ACT; i++) {
     cmd[COMMAND_THRUST] += actuator_state[i] * (int32_t) act_is_thruster_z[i];
   }
-  cmd[COMMAND_THRUST] /= num_thrusters; // <------------------------ TODO: check this
-
+  cmd[COMMAND_THRUST] /= num_thrusters;
 }
 
 /**
