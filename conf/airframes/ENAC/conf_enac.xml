@@ -40,7 +40,7 @@
    telemetry="telemetry/default_rotorcraft.xml"
    flight_plan="flight_plans/competitions/IMAV2022_drop.xml"
    settings="settings/rotorcraft_basic.xml"
-   settings_modules="modules/ahrs_int_cmpl_quat.xml modules/air_data.xml modules/electrical.xml modules/filter_1euro_imu.xml modules/gps.xml modules/gps_ublox.xml modules/guidance_indi.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/jevois.xml modules/logger_sd_chibios.xml modules/nav_rotorcraft.xml modules/nav_survey_poly_rotorcraft.xml modules/stabilization_indi.xml modules/switch_servo.xml modules/tag_tracking.xml"
+   settings_modules="modules/air_data.xml modules/digital_cam_common.xml modules/electrical.xml modules/gps.xml modules/gps_ublox.xml modules/guidance_indi.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/ins_ekf2.xml modules/jevois.xml modules/logger_sd_chibios.xml modules/nav_rotorcraft.xml modules/nav_survey_poly_rotorcraft.xml modules/power_switch.xml modules/stabilization_indi.xml modules/switch_servo.xml modules/tag_tracking.xml"
    gui_color="#fdd12f992f99"
   />
   <aircraft
@@ -62,7 +62,7 @@
    telemetry="telemetry/default_rotorcraft.xml"
    flight_plan="flight_plans/competitions/IMAV2023_dynamic.xml"
    settings="settings/rotorcraft_basic.xml"
-   settings_modules="modules/electrical.xml modules/gps.xml modules/guidance_indi.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/ins_ekf2.xml modules/jevois.xml modules/logger_sd_chibios.xml modules/nav_rotorcraft.xml modules/stabilization_indi.xml modules/switch_servo.xml modules/tag_tracking.xml"
+   settings_modules="modules/ahrs_int_cmpl_quat.xml modules/air_data.xml modules/electrical.xml modules/gps.xml modules/gps_ublox.xml modules/guidance_indi.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/jevois.xml modules/logger_sd_chibios.xml modules/nav_rotorcraft.xml modules/stabilization_indi.xml modules/switch_servo.xml modules/tag_tracking.xml"
    gui_color="#c6d33e3ef958"
   />
   <aircraft
@@ -88,25 +88,14 @@
    gui_color="#ffff7d7d0000"
   />
   <aircraft
-   name="CROW"
-   ac_id="5"
-   airframe="airframes/ENAC/quadrotor/crow_indoor.xml"
-   radio="radios/FrSky_X-Lite.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/ENAC/ENAC_stadium.xml"
-   settings=""
-   settings_modules="modules/ahrs_int_cmpl_quat.xml modules/electrical.xml modules/gps.xml modules/guidance_indi.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/nav_rotorcraft.xml modules/stabilization_indi.xml"
-   gui_color="red"
-  />
-  <aircraft
-   name="GOOSE"
+   name="HEEWING"
    ac_id="7"
-   airframe="airframes/ENAC/quadrotor/goose.xml"
-   radio="radios/FrSky_X-Lite.xml"
+   airframe="airframes/ENAC/hybrid/ranger_indi.xml"
+   radio="radios/T10CG_SBUS.xml"
    telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/ENAC/ENAC_stadium.xml"
-   settings=""
-   settings_modules="modules/electrical.xml modules/gps.xml modules/gps_ublox.xml modules/guidance_indi.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/ins_ekf2.xml modules/nav_rotorcraft.xml modules/stabilization_indi.xml"
-   gui_color="red"
+   flight_plan="flight_plans/rotorcraft_basic.xml"
+   settings="settings/rotorcraft_basic.xml"
+   settings_modules="modules/air_data.xml modules/airspeed_sdp3x.xml modules/eff_scheduling_heewing.xml modules/electrical.xml modules/gps.xml modules/gps_ublox.xml modules/guidance_indi_hybrid.xml modules/guidance_rotorcraft.xml modules/imu_common.xml modules/ins_ekf2.xml modules/logger_sd_chibios.xml modules/nav_hybrid.xml modules/nav_rotorcraft.xml modules/power_switch.xml modules/stabilization_indi.xml"
+   gui_color="#25007900ff00"
   />
 </conf>
