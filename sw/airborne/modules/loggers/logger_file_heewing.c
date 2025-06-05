@@ -73,8 +73,9 @@ static void logger_file_write_header(FILE *file) {
   fprintf(file, "vel_x,vel_y,vel_z,");
   fprintf(file, "att_phi,att_theta,att_psi,");
   fprintf(file, "rate_p,rate_q,rate_r,");
-  fprintf(file, "state_motor_left,state_motor_right,state_motor_back,state_tilt_left,state_tilt_right,state_ailerons,state_elevator,");
-  fprintf(file, "cmd_motor_left,cmd_motor_right,cmd_motor_back,cmd_tilt_left,cmd_tilt_right,cmd_ailerons,cmd_elevator\n");
+  fprintf(file, "state_motor_right,state_motor_left,state_motor_back,state_mean_tilt,state_tilt_diff,state_ailerons,state_elevator,");
+  fprintf(file, "cmd_motor_right,cmd_motor_left,cmd_motor_back,cmd_mean_tilt,cmd_tilt_diff,cmd_ailerons,cmd_elevator,");
+  fprintf(file, "G1_11,G1_12,G1_15,G1_16,G1_21,G1_22,G1_24,G1_27,G1_31,G1_32,G1_35,G1_41,G1_42,G1_44,G1_51,G1_52,G1_54\n");
 }
 
 /** Write CSV row
@@ -99,11 +100,14 @@ static void logger_file_write_row(FILE *file) {
     actuator_state_filt_vect[2], actuator_state_filt_vect[3],
     actuator_state_filt_vect[4], actuator_state_filt_vect[5],
     actuator_state_filt_vect[6]);
-  fprintf(file, "%d,%d,%d,%d,%d,%d,%d\n",
+  fprintf(file, "%d,%d,%d,%d,%d,%d,%d,",
     actuators_pprz[0], actuators_pprz[1],
     actuators_pprz[2], actuators_pprz[3],
     actuators_pprz[4], actuators_pprz[5],
     actuators_pprz[6]);
+  fprintf(file, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+    g1g2[0][0],g1g2[0][1],g1g2[0][4],g1g2[0][5],g1g2[1][0],g1g2[1][1],g1g2[1][3],g1g2[1][6],g1g2[2][0],
+    g1g2[2][1],g1g2[2][4],g1g2[3][0],g1g2[3][1],g1g2[3][3],g1g2[4][0],g1g2[4][1],g1g2[4][3]);
 }
 
 
