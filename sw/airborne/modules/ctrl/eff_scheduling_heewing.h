@@ -34,8 +34,8 @@
 #define ESH_P 0 // X body axis (angular acceleration)
 #define ESH_Q 1 // Y body axis (angular acceleration)
 #define ESH_R 2 // Z body axis (angular acceleration)
-#define ESH_W 3 // Z body axis (linear acceleration)
-#define ESH_U 4 // X body axis (linear acceleration) 
+#define ESH_W 3 // Z body axis (linear acceleration) 
+#define ESH_U 4 // X body axis (linear acceleration)
 
 #define ESH_PHI 0 // Roll axis (linear acceleration) 
 #define ESH_THE 1 // Pitch axis (linear acceleration)
@@ -43,18 +43,18 @@
 #define ESH_D   3 // Down axis (linear acceleration)
 #define ESH_N   4 // North axis (linear acceleration)
 
-#define ESH_CMD_MOTORL 0 // Motor Left
-#define ESH_CMD_MOTORR 1 // Motor Right
+#define ESH_CMD_MOTORR 0 // Motor Right
+#define ESH_CMD_MOTORL 1 // Motor Left
 #define ESH_CMD_MOTORB 2 // Motor Back
-#define ESH_CMD_MOTORLT 3 // Motor Left Tilt
-#define ESH_CMD_MOTORRT 4 // Motor Right Tilt
+#define ESH_CMD_MOTORMT 3 // Motor Mean Tilt
+#define ESH_CMD_MOTORTD 4 // Motor Tilt Diff
 #define ESH_CMD_AILERONS 5 // Aileron
 #define ESH_CMD_ELEVATOR 6 // Elevator
 
 #define ESH_CMD_ROLL 0 // Roll 
 #define ESH_CMD_PITCH 1 // Pitch 
-#define ESH_CMD_FZ 2 // Lift 
-#define ESH_CMD_FX 3 // Thrust 
+#define ESH_CMD_FX 2 // Thrust
+#define ESH_CMD_FZ 3 // Lift 
 
 
 extern float G2[ESH_EFF_MAT_COLS_NB]                               ;
@@ -87,15 +87,16 @@ struct T1_attitude{
   };
 
 struct T1_Model{
-    float lift_eff_ml;
     float lift_eff_mr;
+    float lift_eff_ml;
     float lift_eff_mb;
-    float lift_eff_lt;
-    float lift_eff_rt;
-    float thrust_eff_ml;
+    float lift_eff_mt;
     float thrust_eff_mr;
-    float thrust_eff_lt;
-    float thrust_eff_rt;
+    float thrust_eff_ml;
+    float thrust_eff_mt;
+    float yaw_eff_mr;
+    float yaw_eff_ml;
+    float yaw_eff_mt;
 
     float I_XX;
     float I_YY;
@@ -103,8 +104,8 @@ struct T1_Model{
     struct T1_attitude att;
     struct T1_tilt tiltl;
     struct T1_tilt tiltr;
-    struct T1_motor mL;
     struct T1_motor mR;
+    struct T1_motor mL;
     struct T1_motor mB;    
 
     float aero_coeff;
