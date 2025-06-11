@@ -87,6 +87,9 @@ struct T1_attitude{
   };
 
 struct T1_Model{
+    float yaw_eff_mr;
+    float yaw_eff_ml;
+    float yaw_eff_td;
     float lift_eff_mr;
     float lift_eff_ml;
     float lift_eff_mb;
@@ -94,9 +97,17 @@ struct T1_Model{
     float thrust_eff_mr;
     float thrust_eff_ml;
     float thrust_eff_mt;
-    float yaw_eff_mr;
-    float yaw_eff_ml;
-    float yaw_eff_mt;
+
+    float wls_roll;
+    float wls_pitch;
+    float wls_yaw;
+    float wls_lift;
+    float wls_thrust;
+    float wls_motors;
+    float wls_meant;
+    float wls_tdiff;
+
+    float wls_gamma_sq;
 
     float I_XX;
     float I_YY;

@@ -164,6 +164,52 @@
 #define ESH_TILT_DIFF_MAX 900
 #endif
 
+// WLS Roll Weight
+#ifndef ESH_WLS_ROLL
+#define ESH_WLS_ROLL 1000
+#endif
+
+// WLS Pitch Weight
+#ifndef ESH_WLS_PITCH
+#define ESH_WLS_PITCH 1000
+#endif
+
+// WLS Yaw Weight
+#ifndef ESH_WLS_YAW
+#define ESH_WLS_YAW 10
+#endif
+
+// WLS Lift Weight
+#ifndef ESH_WLS_LIFT
+#define ESH_WLS_LIFT 200
+#endif
+
+// WLS Thrust Weight
+#ifndef ESH_WLS_THRUST
+#define ESH_WLS_THRUST 100
+#endif
+
+// WLS 3 Motors Weight
+#ifndef ESH_WLS_MOTORS
+#define ESH_WLS_MOTORS 1.3
+#endif
+
+// WLS Mean Tilt Weight
+#ifndef ESH_WLS_MEANT
+#define ESH_WLS_MEANT 2.0
+#endif
+
+// WLS Tilt Diff Weight
+#ifndef ESH_WLS_TDIFF
+#define ESH_WLS_TDIFF 1.0
+#endif
+
+// WLS Tilt Diff Weight
+#ifndef ESH_GAMMA_SQ
+#define ESH_GAMMA_SQ 10000.0
+#endif
+
+
 /* Effectiveness Matrix definition */
 float G2_T1[ESH_EFF_MAT_COLS_NB]                           = {0}; //scaled by G_SCALE
 float G1_T1[ESH_EFF_MAT_ROWS_NB][ESH_EFF_MAT_COLS_NB]      = {0}; //scaled by G_SCALE 
@@ -194,8 +240,27 @@ void eff_scheduling_heewing_init(void)
 
 void init_T1_Model(void)
 { 
+  T1.yaw_eff_mr = YAW_EFF_MR;
+  T1.yaw_eff_ml = YAW_EFF_ML;
+  T1.yaw_eff_td = YAW_EFF_TD;
+  T1.lift_eff_mr = LIFT_EFF_MR;
+  T1.lift_eff_ml = LIFT_EFF_ML;
+  T1.lift_eff_mb = LIFT_EFF_MB;
   T1.lift_eff_mt = LIFT_EFF_MT;
+  T1.thrust_eff_mr = THRUST_EFF_MR;
+  T1.thrust_eff_ml = THRUST_EFF_ML;
   T1.thrust_eff_mt = THRUST_EFF_MT;
+
+  T1.wls_roll = ESH_WLS_ROLL;
+  T1.wls_pitch = ESH_WLS_PITCH;
+  T1.wls_yaw = ESH_WLS_YAW;
+  T1.wls_lift = ESH_WLS_LIFT;
+  T1.wls_thrust = ESH_WLS_THRUST;
+  T1.wls_motors = ESH_WLS_MOTORS;
+  T1.wls_meant = ESH_WLS_MEANT;
+  T1.wls_tdiff = ESH_WLS_TDIFF;
+
+  T1.wls_gamma_sq = ESH_GAMMA_SQ;
   
   // Inertia
   T1.I_XX = I_XX_0TILT;
@@ -279,33 +344,31 @@ void calc_G1_G2(void)
 {
   //printf("Vel: %f, Lsin: %f, Rsin: %f, LThrust: %f, RThrust: %f, BThrust: %f\n", T1.as, T1.tiltl.sinr, T1.tiltr.sinr, T1.mL.T, T1.mR.T, T1.mB.T);
   // Motor Right
-  G1_T1[ESH_P][ESH_CMD_MOTORR]  = -0.67 * (ROLL_EFF_MR   * T1.tiltr.sinr * T1.mR.dY) / T1.I_XX;
-  G1_T1[ESH_Q][ESH_CMD_MOTORR]  =  0.44 * (PITCH_EFF_MR  * T1.tiltr.sinr * T1.mR.dX) / T1.I_YY;
-  G1_T1[ESH_R][ESH_CMD_MOTORR]  = -0.5 * (YAW_EFF_MR    * T1.tiltr.cosr * T1.mR.dY) / T1.I_ZZ;
-  G1_T1[ESH_W][ESH_CMD_MOTORR]  = -0.895 * (LIFT_EFF_MR   * T1.tiltr.sinr) / MASS;
-  G1_T1[ESH_U][ESH_CMD_MOTORR]  =  0.5 * (THRUST_EFF_MR * T1.tiltr.cosr) / MASS;
+  G1_T1[ESH_P][ESH_CMD_MOTORR]  = -0.666667 * (ROLL_EFF_MR * T1.tiltr.sinr * T1.mR.dY) / T1.I_XX;
+  G1_T1[ESH_Q][ESH_CMD_MOTORR]  =  0.444444 * (PITCH_EFF_MR  * T1.tiltr.sinr * T1.mR.dX) / T1.I_YY;
+  G1_T1[ESH_R][ESH_CMD_MOTORR]  = -0.444444 * (T1.yaw_eff_mr    * T1.tiltr.cosr * T1.mR.dY) / T1.I_ZZ;
+  G1_T1[ESH_W][ESH_CMD_MOTORR]  = -0.567724 * (T1.lift_eff_mr * T1.tiltr.sinr) / MASS;
+  G1_T1[ESH_U][ESH_CMD_MOTORR]  =  0.567724 * (T1.thrust_eff_mr * T1.tiltr.cosr) / MASS;
   G2_T1[ESH_CMD_MOTORR]         =  0; //T1.mR.dMdud / T1.I_ZZ;
   // Motor Left
-  G1_T1[ESH_P][ESH_CMD_MOTORL]  =  0.67 * (ROLL_EFF_ML   * T1.tiltl.sinr * T1.mL.dY) / T1.I_XX;
-  G1_T1[ESH_Q][ESH_CMD_MOTORL]  =  0.44 * (PITCH_EFF_ML  * T1.tiltl.sinr * T1.mL.dX) / T1.I_YY;
-  G1_T1[ESH_R][ESH_CMD_MOTORL]  =  0.5 * (YAW_EFF_ML    * T1.tiltl.cosr * T1.mL.dY) / T1.I_ZZ;
-  G1_T1[ESH_W][ESH_CMD_MOTORL]  = -0.895 * (LIFT_EFF_ML   * T1.tiltl.sinr) / MASS;
-  G1_T1[ESH_U][ESH_CMD_MOTORL]  =  0.5 * (THRUST_EFF_ML * T1.tiltl.cosr) / MASS;
+  G1_T1[ESH_P][ESH_CMD_MOTORL]  =  0.666667 * (ROLL_EFF_ML * T1.tiltl.sinr * T1.mL.dY) / T1.I_XX;
+  G1_T1[ESH_Q][ESH_CMD_MOTORL]  =  0.444444 * (PITCH_EFF_ML  * T1.tiltl.sinr * T1.mL.dX) / T1.I_YY;
+  G1_T1[ESH_R][ESH_CMD_MOTORL]  =  0.444444 * (T1.yaw_eff_ml    * T1.tiltl.cosr * T1.mL.dY) / T1.I_ZZ;
+  G1_T1[ESH_W][ESH_CMD_MOTORL]  = -0.567724 * (T1.lift_eff_ml * T1.tiltl.sinr) / MASS;
+  G1_T1[ESH_U][ESH_CMD_MOTORL]  =  0.567724 * (T1.thrust_eff_ml * T1.tiltl.cosr) / MASS;
   G2_T1[ESH_CMD_MOTORL]         =  0; //T1.mL.dMdud / T1.I_ZZ;
-  // Motor Back
+  // Motor Back 
   G1_T1[ESH_Q][ESH_CMD_MOTORB]  = -0.24 * (PITCH_EFF_MB * T1.mB.dX) / T1.I_YY;
-  G1_T1[ESH_W][ESH_CMD_MOTORB]  = -0.57 * 1.7 * LIFT_EFF_MB / MASS;
+  G1_T1[ESH_W][ESH_CMD_MOTORB]  = -0.568035 * T1.lift_eff_mb / MASS;
   G2_T1[ESH_CMD_MOTORB]         =  0; //-T1.mB.dMdud / T1.I_ZZ;
   // Motor Mean Tilt
   G1_T1[ESH_Q][ESH_CMD_MOTORMT]  = 0.2 * (T1.mR.T * T1.tiltr.sinr * T1.mR.dX + T1.mL.T * T1.tiltl.sinr * T1.mL.dX) / T1.I_YY;
-  G1_T1[ESH_W][ESH_CMD_MOTORMT]  = -T1.lift_eff_mt * (T1.mR.T * T1.tiltr.cosr + T1.mL.T * T1.tiltl.cosr) / MASS;
-  G1_T1[ESH_U][ESH_CMD_MOTORMT]  = -T1.thrust_eff_mt * (T1.mR.T * T1.tiltr.sinr + T1.mL.T * T1.tiltl.sinr) / MASS;
+  G1_T1[ESH_W][ESH_CMD_MOTORMT]  = -T1.lift_eff_mt * 0.0003 * (T1.mR.T * T1.tiltr.cosr + T1.mL.T * T1.tiltl.cosr) / MASS;
+  G1_T1[ESH_U][ESH_CMD_MOTORMT]  = -T1.thrust_eff_mt * 0.0003 * (T1.mR.T * T1.tiltr.sinr + T1.mL.T * T1.tiltl.sinr) / MASS;
   G2_T1[ESH_CMD_MOTORMT]         =  0; //T1.mR.dMdud / T1.I_ZZ;
   // Motor Tilt Diff
-  float td_r = (T1.mR.T * T1.tiltr.sinr * T1.mR.dY + T1.mL.T * T1.tiltl.sinr * T1.mL.dY) / (2 * T1.I_ZZ);
-  if(td_r > 16) { // act for mean tilt > 70deg
-      G1_T1[ESH_R][ESH_CMD_MOTORTD]  = YAW_EFF_TD * td_r;
-  } else {G1_T1[ESH_R][ESH_CMD_MOTORTD]  = 0;}
+  G1_T1[ESH_P][ESH_CMD_MOTORTD]  = 1.536098 * (T1.mR.T * T1.tiltr.sinr * T1.mR.dY + T1.mL.T * T1.tiltl.sinr * T1.mL.dY) / (2 * T1.I_ZZ);
+  G1_T1[ESH_R][ESH_CMD_MOTORTD]  = T1.yaw_eff_td * 1.536098 * (T1.mR.T * T1.tiltr.sinr * T1.mR.dY + T1.mL.T * T1.tiltl.sinr * T1.mL.dY) / (2 * T1.I_ZZ);
   G2_T1[ESH_CMD_MOTORTD]         =  0; //T1.mR.dMdud / T1.I_ZZ;
   // Criteria to not saturate control surfaces at low speed and start using them at around 10 m/s
   if (T1.as < 10) {
@@ -406,6 +469,22 @@ void sum_copy_EFF_MAT(void) {
 
 void stabilization_indi_set_wls_settings(void)
 {
+  wls_stab_p.gamma_sq = T1.wls_gamma_sq;
+
+  wls_stab_p.Wv[0] = T1.wls_roll;
+  wls_stab_p.Wv[1] = T1.wls_pitch;
+  wls_stab_p.Wv[2] = T1.wls_yaw;
+  wls_stab_p.Wv[3] = T1.wls_lift;
+  wls_stab_p.Wv[4] = T1.wls_thrust;
+
+  wls_stab_p.Wu[0] = T1.wls_motors;
+  wls_stab_p.Wu[1] = T1.wls_motors;
+  wls_stab_p.Wu[2] = T1.wls_motors;
+  wls_stab_p.Wu[3] = T1.wls_meant;
+  wls_stab_p.Wu[4] = T1.wls_tdiff;
+  wls_stab_p.Wu[5] = 1.0;
+  wls_stab_p.Wu[6] = 1.0;
+
   for (int8_t i = 0; i < ESH_EFF_MAT_COLS_NB; i++) {
     switch (i) {
       case (ESH_CMD_MOTORR):
@@ -422,7 +501,7 @@ void stabilization_indi_set_wls_settings(void)
         break;
       case(ESH_CMD_MOTORMT):
         wls_stab_p.u_min[i] = 0;
-        wls_stab_p.u_max[i] = MAX_PPRZ-ESH_TILT_DIFF_MAX;
+        wls_stab_p.u_max[i] = MAX_PPRZ - ESH_TILT_DIFF_MAX;
         wls_stab_p.u_pref[i] = act_pref[i];
         break;
       case(ESH_CMD_AILERONS):
