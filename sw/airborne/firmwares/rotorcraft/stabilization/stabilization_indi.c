@@ -94,8 +94,6 @@
 #warning SetAutoCommandsFromRC not used: STAB_INDI writes actuators directly
 #endif
 
-float test_thrust_control = 0.0;
-
 #if !STABILIZATION_INDI_ALLOCATION_PSEUDO_INVERSE
 #if INDI_NUM_ACT > WLS_N_U_MAX
 #error Matrix-WLS_N_U_MAX too small or not defined: define WLS_N_U_MAX >= INDI_NUM_ACT in airframe file
@@ -213,6 +211,16 @@ float act_dyn_discrete[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_DYN;
 float act_first_order_cutoff[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_FREQ;
 float act_dyn_discrete[INDI_NUM_ACT]; // will be computed from freq at init
 #endif
+
+#ifdef TEST_STAB_HEEWING
+bool test_stab_switch = TEST_STAB_HEEWING;
+#else
+bool test_stab_switch = false;
+#endif
+
+float test_thrust_control = 0.0;
+struct FloatEulers esh_test_att_sp;
+float esh_test_heading;
 
 /**
  * Limit the maximum specific moment that can be compensated (units rad/s^2)
@@ -645,12 +653,6 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
   // calculate the virtual control (reference acceleration) based on a PD controller
   struct FloatRates rate_sp = stab_sp_to_rates_f(sp);
 
-  #if TEST_STAB_HEEWING
-    rate_sp.p = 0;
-    rate_sp.q = 0;
-    rate_sp.r = 0;
-  #endif
-
   angular_accel_ref.p = (rate_sp.p - rates_filt.p) * indi_gains.rate.p;
   angular_accel_ref.q = (rate_sp.q - rates_filt.q) * indi_gains.rate.q;
   angular_accel_ref.r = (rate_sp.r - rates_filt.r) * indi_gains.rate.r;
@@ -661,7 +663,15 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     v_thrust.x = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_X);
     v_thrust.y = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_Y);
     v_thrust.z = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_Z);
-    
+
+    #if 0
+    if (test_stab_switch) {
+    v_thrust.x = 0;
+    v_thrust.y = 0;
+    v_thrust.z = -0.06 * test_thrust_control;
+    }
+    #endif
+
     // Compute estimated thrust
     struct FloatVect3 thrust_filt = { 0.f, 0.f, 0.f };
     for (i = 0; i < INDI_NUM_ACT; i++) {
@@ -678,6 +688,7 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     float th_cmd_x = (float)th_sp_to_thrust_i(thrust, 0, THRUST_AXIS_X);
 #endif
     float th_cmd_z = (float)th_sp_to_thrust_i(thrust, 0, THRUST_AXIS_Z);
+    
     for (i = 0; i < INDI_NUM_ACT; i++) {
       v_thrust.z += th_cmd_z * Bwls[3][i];
 #if INDI_OUTPUTS == 5
@@ -690,10 +701,12 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     v_thrust.y = 0.f;
   }
 
-  #if TEST_STAB_HEEWING
+  #if 1
+  if (test_stab_switch) {
     v_thrust.x = 0;
     v_thrust.y = 0;
     v_thrust.z = -1.0 * test_thrust_control;
+  }
   #endif
 
   // This term compensates for the spinup torque in the yaw axis
@@ -762,6 +775,8 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
   }
   //printf("\n");
 
+  //actuators_pprz[3]=8700;
+
   //update thrust command such that the current is correctly estimated
   update_total_thrust(cmd);
 }
@@ -820,6 +835,13 @@ void stabilization_indi_attitude_run(bool in_flight, struct StabilizationSetpoin
   struct FloatQuat att_err;
   struct FloatQuat *att_quat = stateGetNedToBodyQuat_f();
   struct FloatQuat quat_sp = stab_sp_to_quat_f(att_sp);
+
+  if (test_stab_switch){
+    esh_test_att_sp.phi = 0;
+    esh_test_att_sp.theta = 0;
+    esh_test_att_sp.psi = esh_test_heading * M_PI / 180; 
+    float_quat_of_eulers_zxy(&quat_sp, &esh_test_att_sp);
+  }
 
   float_quat_inv_comp_norm_shortest(&att_err, att_quat, &quat_sp);
 

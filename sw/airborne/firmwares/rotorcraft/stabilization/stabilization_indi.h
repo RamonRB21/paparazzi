@@ -37,6 +37,10 @@ extern bool act_is_servo[INDI_NUM_ACT];
 
 extern bool indi_use_adaptive;
 
+extern bool test_stab_switch;
+extern float test_thrust_control;
+extern float esh_test_heading;
+
 extern float *Bwls[INDI_OUTPUTS];
 
 extern float thrust_bx_eff;
