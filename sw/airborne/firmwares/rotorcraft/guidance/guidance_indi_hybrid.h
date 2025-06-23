@@ -49,7 +49,7 @@ extern void guidance_indi_init(void);
 extern void guidance_indi_enter(void);
 extern float guidance_indi_get_liftd(float pitch, float theta);
 extern void guidance_indi_calcg_wing(float Gmat[GUIDANCE_INDI_HYBRID_V][GUIDANCE_INDI_HYBRID_U], struct FloatVect3 a_diff, float v_body[GUIDANCE_INDI_HYBRID_V]);
-extern float get_max_pusher_thrust();
+extern float get_max_pusher_thrust(void);
 
 #if GUIDANCE_INDI_HYBRID_USE_WLS
 #include "math/wls/wls_alloc.h"
@@ -69,7 +69,7 @@ enum GuidanceIndiHybrid_VMode {
   GUIDANCE_INDI_HYBRID_V_ACCEL
 };
 
-extern struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accep_sp, float heading_sp);
+extern struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, float heading_sp);
 extern struct StabilizationSetpoint guidance_indi_run_mode(bool in_flight, struct HorizontalGuidance *gh, struct VerticalGuidance *gv, enum GuidanceIndiHybrid_HMode h_mode, enum GuidanceIndiHybrid_VMode v_mode);
 extern void guidance_set_min_max_airspeed(float min_airspeed, float max_airspeed);
 
@@ -88,7 +88,7 @@ struct guidance_indi_hybrid_params {
   float climb_vspeed_fwd;
   float descend_vspeed_fwd;
   float climb_vspeed_quad;
-  float descend_vspeed_quad;
+  float descend_vspeed_quad; //
 };
 
 extern struct FloatVect3 sp_accel;
@@ -100,6 +100,9 @@ extern float guidance_indi_pitch_pref_deg;
 extern float gi_unbounded_airspeed_sp;
 
 extern float guidance_indi_thrust_z_eff;
+extern float thrust_vect[3];
+extern struct FloatEulers guidance_euler_cmd;
+extern float gi_pitch_eff_scaling;
 
 extern float guidance_indi_specific_force_gain;
 extern bool take_heading_control;

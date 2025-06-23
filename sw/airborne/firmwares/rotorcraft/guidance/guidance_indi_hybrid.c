@@ -130,7 +130,6 @@ struct guidance_indi_hybrid_params gih_params = {
 // Quadplanes can hover at various pref pitch
 float guidance_indi_pitch_pref_deg = 0;
 
-
 // If using WLS, check that the matrix size is sufficient
 #if GUIDANCE_INDI_HYBRID_USE_WLS
 #if GUIDANCE_INDI_HYBRID_U > WLS_N_U_MAX
@@ -276,6 +275,9 @@ struct WLS_t wls_guid_p = {
 #endif
 // The control objective
 float v_gih[3];
+
+float thrust_vect[3];
+float gi_pitch_eff_scaling;
 
 // Filters
 float filter_cutoff = GUIDANCE_INDI_FILTER_CUTOFF;
@@ -464,6 +466,9 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   Bound(a_diff.y, -6.0, 6.0);
   Bound(a_diff.z, -9.0, 9.0);
 
+  //printf("sp_accel:   X: %f | Y: %f | Z: %f\n", sp_accel.x, sp_accel.y, sp_accel.z);
+  //printf("accel_filt: X: %f | Y: %f | Z: %f\n", accel_filt.x, accel_filt.y, accel_filt.z);
+
   // If the thrust to specific force ratio has been defined, include vertical control
   // else ignore the vertical acceleration error
 #ifndef GUIDANCE_INDI_SPECIFIC_FORCE_GAIN
@@ -492,6 +497,8 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   euler_cmd.x = du_gih[0];
   euler_cmd.y = du_gih[1];
   euler_cmd.z = du_gih[2];
+
+  //printf("du_gih: ROLL: %f | PITCH: %f | FZ: %f | FX: %f\n", du_gih[0], du_gih[1], du_gih[2], du_gih[3]);
 
 #else
   // compute inverse matrix of Ga
@@ -596,19 +603,19 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   thrust_sp = th_sp_from_thrust_i(thrust_in, THRUST_AXIS_Z);
 
 #else
-  float thrust_vect[3];
+  //float thrust_vect[3];
 #if GUIDANCE_INDI_HYBRID_U > 3
   thrust_vect[0] = du_gih[3];
   float max_pusher_thrust = get_max_pusher_thrust();
-  if (thrust_vect[0] > max_pusher_thrust) {
+  if (fabs(thrust_vect[0]) > fabs(max_pusher_thrust)) {
     thrust_vect[0] = max_pusher_thrust;
   }
 #else
   thrust_vect[0] = 0;
 #endif
   thrust_vect[1] = 0;
-  thrust_vect[2] = -euler_cmd.z;
-  //printf("thrust_vect_z: %f\n", thrust_vect[2]); // FALTA PROBAR ESTO Y ANALIZAR
+  thrust_vect[2] = euler_cmd.z;
+  //printf("thrust_vect_z: %f\n", thrust_vect[2]);
   // specific force not defined, return required increment
   thrust_sp = th_sp_from_incr_vect_f(thrust_vect);
 #endif
@@ -617,7 +624,7 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   struct FloatQuat sp_quat;
   float_quat_of_eulers_zxy(&sp_quat, &guidance_euler_cmd);
   float_quat_normalize(&sp_quat);
-
+  
   return stab_sp_from_quat_ff_rates_f(&sp_quat, &ff_rates);
 }
 
@@ -912,7 +919,7 @@ float WEAK guidance_indi_get_liftd(float airspeed, float theta) {
 }
 
 #if GUIDANCE_INDI_HYBRID_U > 3
-float WEAK get_max_pusher_thrust() {
+float WEAK get_max_pusher_thrust(void) {
   return GUIDANCE_INDI_MAX_PUSHER_INCREMENT*g1g2[4][GUIDANCE_INDI_PUSHER_INDEX];
 }
 #endif

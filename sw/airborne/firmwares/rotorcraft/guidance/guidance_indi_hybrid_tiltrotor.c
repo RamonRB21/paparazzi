@@ -45,7 +45,7 @@ void guidance_indi_tiltrotor_init(void) {
   float tau_bodyz = 1.0/(2.0*M_PI*bodyz_filter_cutoff);
   float sample_time = 1.0 / PERIODIC_FREQUENCY;
   init_butterworth_2_low_pass(&accel_bodyx_filt, tau_bodyx, sample_time, 0.0);
-  init_butterworth_2_low_pass(&accel_bodyz_filt, tau_bodyz, sample_time, 9.81);
+  init_butterworth_2_low_pass(&accel_bodyz_filt, tau_bodyz, sample_time, -9.81);
 }
 
 /**
@@ -86,28 +86,30 @@ void guidance_indi_calcg_wing(float Gmat[GUIDANCE_INDI_HYBRID_V][GUIDANCE_INDI_H
 #define GUIDANCE_INDI_PITCH_EFF_SCALING 1.0
 #endif
 
+  gi_pitch_eff_scaling = GUIDANCE_INDI_PITCH_EFF_SCALING;
+
   /*Force resultants*/
-  float fx = accel_bodyx_filt.o[0]; 
+  //float fx = accel_bodyx_filt.o[0];
   float fz = accel_bodyz_filt.o[0];
 
   // get the derivative of the lift wrt to theta
-  float dfz = guidance_indi_get_liftd(0.0f, 0.0f);
-
-  Gmat[GIHT_X][GIHT_CMD_ROLL] = -spsi * cphi * stheta * fx + spsi * cphi * ctheta * fz;
+  float dfz = guidance_indi_get_liftd(stateGetAirspeed_f(), eulers_zxy.theta);
+#if 0  
+  Gmat[GIHT_X][GIHT_CMD_ROLL] =  0; //-spsi * cphi * stheta * fx + spsi * cphi * ctheta * fz;
   Gmat[GIHT_Y][GIHT_CMD_ROLL] =  cpsi * cphi * stheta * fx - cpsi * cphi * ctheta * fz;
-  Gmat[GIHT_Z][GIHT_CMD_ROLL] =  sphi * stheta * fx - sphi * ctheta * fz;
+  Gmat[GIHT_Z][GIHT_CMD_ROLL] =  0; //sphi * stheta * fx - sphi * ctheta * fz;
 
-  Gmat[GIHT_X][GIHT_CMD_PITCH] = (-cpsi * stheta - spsi * sphi * ctheta) * fx + (cpsi * ctheta - spsi * sphi * stheta) * fz + (cpsi * stheta + spsi * sphi * ctheta) * dfz;
-  Gmat[GIHT_Y][GIHT_CMD_PITCH] = (-spsi * stheta + cpsi * sphi * ctheta) * fx + (spsi * ctheta + cpsi * sphi * stheta) * fz + (spsi * stheta - cpsi * sphi * ctheta) * dfz;
-  Gmat[GIHT_Z][GIHT_CMD_PITCH] =  -cphi * ctheta                         * fx -  cphi * stheta                         * fz +  cphi * ctheta                         * dfz;
+  Gmat[GIHT_X][GIHT_CMD_PITCH] = gi_pitch_eff_scaling * ((-cpsi * stheta - spsi * sphi * ctheta) * fx + (cpsi * ctheta - spsi * sphi * stheta) * fz) + (cpsi * stheta + spsi * sphi * ctheta) * dfz;
+  Gmat[GIHT_Y][GIHT_CMD_PITCH] = 0; //(-spsi * stheta + cpsi * sphi * ctheta) * fx + (spsi * ctheta + cpsi * sphi * stheta) * fz + (spsi * stheta - cpsi * sphi * ctheta) * dfz;
+  Gmat[GIHT_Z][GIHT_CMD_PITCH] = -gi_pitch_eff_scaling * cphi * ctheta * fx - cphi * stheta * fz + cphi * ctheta * dfz;
 
-  Gmat[GIHT_X][GIHT_CMD_FZ] = cpsi * stheta + spsi * sphi * ctheta;
-  Gmat[GIHT_Y][GIHT_CMD_FZ] = spsi * stheta - cpsi * sphi * ctheta;
+  Gmat[GIHT_X][GIHT_CMD_FZ] = 0; //cpsi * stheta + spsi * sphi * ctheta;
+  Gmat[GIHT_Y][GIHT_CMD_FZ] = 0; //spsi * stheta - cpsi * sphi * ctheta;
   Gmat[GIHT_Z][GIHT_CMD_FZ] = cphi * ctheta;
 
   Gmat[GIHT_X][GIHT_CMD_FX] =  cpsi * ctheta - spsi * sphi * stheta;
-  Gmat[GIHT_Y][GIHT_CMD_FX] =  spsi * ctheta + cpsi * sphi * stheta;
-  Gmat[GIHT_Z][GIHT_CMD_FX] = -cphi * stheta;
+  Gmat[GIHT_Y][GIHT_CMD_FX] =  0; //spsi * ctheta + cpsi * sphi * stheta;
+  Gmat[GIHT_Z][GIHT_CMD_FX] =  0; //-cphi * stheta;
   // Make this term zero to prevent switching 'exploits'
   // Gmat[GIHT_Z][GIHT_CMD_FX] = 0;
 
@@ -115,29 +117,30 @@ void guidance_indi_calcg_wing(float Gmat[GUIDANCE_INDI_HYBRID_V][GUIDANCE_INDI_H
   body_v[GIHT_X] =  a_diff.x;
   body_v[GIHT_Y] =  a_diff.y;
   body_v[GIHT_Z] =  a_diff.z;
+  
+#endif 
 
-  #if 0
-  Gmat[GIHT_X][GIHT_CMD_ROLL] = -sphi * stheta * fz;
-  Gmat[GIHT_Y][GIHT_CMD_ROLL] = -cphi * fz;
-  Gmat[GIHT_Z][GIHT_CMD_ROLL] = -sphi * ctheta * fz;
+  Gmat[0][0] = -sphi*stheta*fz;
+  Gmat[1][0] = -cphi*fz;
+  Gmat[2][0] = -sphi*ctheta*fz;
 
-  Gmat[GIHT_X][GIHT_CMD_PITCH] =  -sphi * fx + ctheta * cphi * fz + stheta * cphi * dfz;
-  Gmat[GIHT_Y][GIHT_CMD_PITCH] =  0;
-  Gmat[GIHT_Z][GIHT_CMD_PITCH] =  -ctheta * fx - stheta * cphi * fz + ctheta * cphi * dfz;
+  Gmat[0][1] =  cphi*ctheta*fz*gi_pitch_eff_scaling;
+  Gmat[1][1] =  sphi*stheta*fz*gi_pitch_eff_scaling - sphi*dfz;
+  Gmat[2][1] = -cphi*stheta*fz*gi_pitch_eff_scaling + cphi*dfz;
 
-  Gmat[GIHT_X][GIHT_CMD_FZ] =  cphi * stheta;
-  Gmat[GIHT_Y][GIHT_CMD_FZ] = -sphi;
-  Gmat[GIHT_Z][GIHT_CMD_FZ] =  cphi * ctheta;
+  Gmat[0][2] =  cphi*stheta;
+  Gmat[1][2] = -sphi;
+  Gmat[2][2] =  cphi*ctheta;
 
-  Gmat[GIHT_X][GIHT_CMD_FX] =  ctheta;
-  Gmat[GIHT_Y][GIHT_CMD_FX] =  0;
-  Gmat[GIHT_Z][GIHT_CMD_FX] = -stheta;
+  Gmat[0][3] =  ctheta;
+  Gmat[1][3] =  0;
+  Gmat[2][3] = -stheta;
   // Make this term zero to prevent switching 'exploits'
-  // Gmat[GIHT_Z][GIHT_CMD_FX] = 0;
+  // Gmat[2][3] = 0;
 
   // Convert acceleration error to body axis system
-  body_v[GIHT_X] =  cpsi * a_diff.x + spsi * a_diff.y;
-  body_v[GIHT_Y] = -spsi * a_diff.x + cpsi * a_diff.y;
-  body_v[GIHT_Z] =  a_diff.z;
-  #endif
+  body_v[0] =  cpsi * a_diff.x + spsi * a_diff.y;
+  body_v[1] = -spsi * a_diff.x + cpsi * a_diff.y;
+  body_v[2] =  a_diff.z;
+
 }

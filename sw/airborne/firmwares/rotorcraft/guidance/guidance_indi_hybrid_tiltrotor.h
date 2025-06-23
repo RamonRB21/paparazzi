@@ -33,7 +33,6 @@
 extern void guidance_indi_tiltrotor_init(void);
 extern void guidance_indi_tiltrotor_propagate_filters(void);
 
-
 #ifndef GUIDANCE_INDI_MIN_PITCH
 #define GUIDANCE_INDI_MIN_PITCH -20
 #define GUIDANCE_INDI_MAX_PITCH 20
