@@ -54,6 +54,7 @@
   <settings>
     <dl_settings>
       <dl_settings NAME="indi">
+        <dl_setting var="test_thrustx_control" min="0" step="1" max="3000" shortname="THRUST_X_CONTROL" param="TEST_THRUST_X_CONTROL"/>
         <dl_setting var="test_thrust_control" min="0" step="1" max="3000" shortname="THRUST_Z_CONTROL" param="TEST_THRUST_Z_CONTROL"/>
         <dl_setting var="esh_test_heading" min="0" step="1" max="360" shortname="HEADING_SP" param="TEST_HEADING_SP"/>
         <dl_setting var="test_stab_switch" min="0" step="1" max="1" values="FALSE|TRUE" shortname="test_stab_switch" param="TEST_STAB_HEEWING"/>

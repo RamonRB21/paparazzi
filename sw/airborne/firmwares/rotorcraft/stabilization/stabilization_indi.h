@@ -39,7 +39,10 @@ extern bool indi_use_adaptive;
 
 extern bool test_stab_switch;
 extern float test_thrust_control;
+extern float test_thrustx_control;
 extern float esh_test_heading;
+extern struct FloatEulers esh_test_att_sp;
+extern float indi_v[INDI_OUTPUTS];
 
 extern float *Bwls[INDI_OUTPUTS];
 

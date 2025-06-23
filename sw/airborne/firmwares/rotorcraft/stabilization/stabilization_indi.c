@@ -219,6 +219,7 @@ bool test_stab_switch = false;
 #endif
 
 float test_thrust_control = 0.0;
+float test_thrustx_control = 0.0;
 struct FloatEulers esh_test_att_sp;
 float esh_test_heading;
 
@@ -671,7 +672,6 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     v_thrust.z = -0.06 * test_thrust_control;
     }
     #endif
-
     // Compute estimated thrust
     struct FloatVect3 thrust_filt = { 0.f, 0.f, 0.f };
     for (i = 0; i < INDI_NUM_ACT; i++) {
@@ -703,9 +703,9 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
 
   #if 1
   if (test_stab_switch) {
-    v_thrust.x = 0;
-    v_thrust.y = 0;
-    v_thrust.z = -1.0 * test_thrust_control;
+    v_thrust.x = 0.1 * test_thrustx_control;
+    //v_thrust.y = 0;
+    v_thrust.z = -test_thrust_control;
   }
   #endif
 
@@ -776,6 +776,8 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
   //printf("\n");
 
   //actuators_pprz[3]=8700;
+  //actuators_pprz[4]=test_thrust_control;
+  
 
   //update thrust command such that the current is correctly estimated
   update_total_thrust(cmd);
@@ -836,12 +838,16 @@ void stabilization_indi_attitude_run(bool in_flight, struct StabilizationSetpoin
   struct FloatQuat *att_quat = stateGetNedToBodyQuat_f();
   struct FloatQuat quat_sp = stab_sp_to_quat_f(att_sp);
 
+  #if 1
   if (test_stab_switch){
     esh_test_att_sp.phi = 0;
     esh_test_att_sp.theta = 0;
     esh_test_att_sp.psi = esh_test_heading * M_PI / 180; 
     float_quat_of_eulers_zxy(&quat_sp, &esh_test_att_sp);
   }
+  #endif
+
+  float_eulers_of_quat(&esh_test_att_sp,&quat_sp);
 
   float_quat_inv_comp_norm_shortest(&att_err, att_quat, &quat_sp);
 
