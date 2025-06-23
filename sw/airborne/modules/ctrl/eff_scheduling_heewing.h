@@ -53,8 +53,8 @@
 
 #define ESH_CMD_ROLL 0 // Roll 
 #define ESH_CMD_PITCH 1 // Pitch 
-#define ESH_CMD_FX 2 // Thrust
-#define ESH_CMD_FZ 3 // Lift 
+#define ESH_CMD_FZ 2 // Lift
+#define ESH_CMD_FX 3 // Thrust 
 
 
 extern float G2[ESH_EFF_MAT_COLS_NB]                               ;
@@ -87,6 +87,8 @@ struct T1_attitude{
   };
 
 struct T1_Model{
+    float roll_eff_ail;
+    float pitch_eff_ele;
     float yaw_eff_mr;
     float yaw_eff_ml;
     float yaw_eff_td;
@@ -108,6 +110,8 @@ struct T1_Model{
     float wls_tdiff;
 
     float wls_gamma_sq;
+
+    float wls_min_mt;
 
     float I_XX;
     float I_YY;
@@ -131,5 +135,6 @@ extern void eff_scheduling_heewing_init(void);
 extern void eff_scheduling_heewing_periodic(void);
 
 extern struct T1_Model T1;
+extern float esh_fake_airspeed;
  
 #endif  // CTRL_EFF_SCHED_HEEWING_H
