@@ -113,6 +113,10 @@
       <define name="GPS_FIX_TIMEOUT" value="0.5"/>
     </module>
 
+    <!--module name ="gps" type= "optitrack">
+      <define name="INS_EKF2_OPTITRACK" value="TRUE"/>
+    </module-->
+
     <module name="power_switch"/>
   </firmware>
 
@@ -135,7 +139,7 @@
     <axis name="PITCH"          group="VIRTUAL" failsafe_value="0"/>
     <axis name="YAW"            group="VIRTUAL" failsafe_value="0"/>
     <axis name="THRUST"         group="VIRTUAL" failsafe_value="0"/>
-    <axis name="TILT"           group="VIRTUAL" failsafe_value="0"/>
+    <axis name="MEAN_TILT"      group="VIRTUAL" failsafe_value="0"/>
     <axis name="DELTA_TILT"     group="VIRTUAL" failsafe_value="0"/>
   </commands>
 
@@ -145,7 +149,7 @@
     <call fun="command_set(COMMAND_MOTOR_TAIL,  autopilot.motors_on ?  actuators_pprz[2] : -MAX_PPRZ)"/>
     <call fun="command_set(COMMAND_ROLL,        autopilot.motors_on ?  actuators_pprz[5] : 0)"/>
     <call fun="command_set(COMMAND_PITCH,       autopilot.motors_on ?  actuators_pprz[6] : 0)"/>
-    <call fun="command_set(COMMAND_TILT,        autopilot.motors_on ?  actuators_pprz[3] : 0)"/>
+    <call fun="command_set(COMMAND_MEAN_TILT,   autopilot.motors_on ?  (autopilot_in_flight() ? actuators_pprz[3] : 8700) : 0)"/>
     <call fun="command_set(COMMAND_DELTA_TILT,  autopilot.motors_on ?  actuators_pprz[4] : 0)"/>
     <set servo="MOTOR_RIGHT"    value="@MOTOR_RIGHT"/>
     <set servo="MOTOR_LEFT"     value="@MOTOR_LEFT"/>
@@ -153,8 +157,8 @@
     <set servo="AILERON_RIGHT"  value="@ROLL"/>
     <set servo="AILERON_LEFT"   value="@ROLL"/>
     <set servo="ELEVATOR"       value="@PITCH"/>
-    <set servo="TILT_RIGHT"     value="@TILT + @DELTA_TILT"/>
-    <set servo="TILT_LEFT"      value="@TILT - @DELTA_TILT"/>
+    <set servo="TILT_RIGHT"     value="@MEAN_TILT + @DELTA_TILT"/>
+    <set servo="TILT_LEFT"      value="@MEAN_TILT - @DELTA_TILT"/>
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
@@ -256,12 +260,12 @@
     <define name="G2" value="{0., 0., 0., 0., 0., 0., 0.}"/>
 
     <!-- reference acceleration for attitude control -->
-    <define name="REF_ERR_P" value="100"/>
-    <define name="REF_ERR_Q" value="80"/>
-    <define name="REF_ERR_R" value="70"/>
-    <define name="REF_RATE_P" value="10."/> 
-    <define name="REF_RATE_Q" value="18.0"/>
-    <define name="REF_RATE_R" value="18.0"/> 
+    <define name="REF_ERR_P" value="51.617"/><!--100--><!--15.522-->
+    <define name="REF_ERR_Q" value="85.1472"/><!--80--><!--27.5922-->
+    <define name="REF_ERR_R" value="132.48"/><!--70--><!--24.9912-->
+    <define name="REF_RATE_P" value="10.0"/> 
+    <define name="REF_RATE_Q" value="18.0"/><!--20-->
+    <define name="REF_RATE_R" value="18.0"/><!--11-->
 
     <define name="ESTIMATION_FILT_CUTOFF" value="4.0"/>
     <define name="FILT_CUTOFF" value="5.0"/>
@@ -276,8 +280,7 @@
     <define name="ADAPTIVE_MU" value="0.0001"/>
   </section>
 
-  <section name ="EFFECTIVE_SCHEDULING">            
-    <define name="FLT_CUTOFF_FREQ"                   value="0.001"/>
+  <section name ="EFFECTIVE_SCHEDULING">
     <define name="I_XX_0TILT"                        value="0.005"/> <!-- X-AXIS MOMENT OF INERTIA AT TILT = 0 -->
     <define name="I_YY_0TILT"                        value="0.005"/> <!-- Y-AXIS MOMENT OF INERTIA AT TILT = 0 -->
     <define name="I_ZZ_0TILT"                        value="0.015"/> <!-- Z-AXIS MOMENT OF INERTIA AT TILT = 0 -->
@@ -290,23 +293,28 @@
     <define name="STABILIZATION_INDI_WLS_WU"         value="{1.3, 1.3, 1.3, 2.0, 1.0, 1.0, 1.0}"/> <!-- Left Thrust, Right Thrust, Tail Thrust, Mean Tilt, Tilt Diff, Ailerons, Elevator -->
     <define name="GUIDANCE_INDI_HYBRID_USE_WLS"      value="1"/>
     <define name="GUIDANCE_INDI_WLS_PRIORITIES"      value="{10, 10, 10}"/> <!-- X, Y, Z Accelerations -->
-    <define name="GUIDANCE_INDI_WLS_WU"              value="{200, 200, 100, 10}"/> <!-- Roll, Pitch, Lift, Thrust -->
+    <define name="GUIDANCE_INDI_WLS_WU"              value="{1000, 1000, 200, 100}"/> <!-- Roll, Pitch, Lift, Thrust -->
     <define name="GUIDANCE_INDI_PUSHER_INDEX"            value="1"/>
     <define name="STABILIZATION_INDI_G1_THRUST_X"        value="4"/>
-    <define name="STABILIZATION_INDI_ACT_IS_THRUSTER_X"      value="{1, 1, 0, 1, 1, 0, 0}"/>
-    <define name="STABILIZATION_INDI_ACT_IS_THRUSTER_Z"      value="{1, 1, 1, 1, 1, 0, 0}"/>
+    <define name="STABILIZATION_INDI_ACT_IS_THRUSTER_X"      value="{1, 1, 0, 1, 0, 0, 0}"/>
+    <define name="STABILIZATION_INDI_ACT_IS_THRUSTER_Z"      value="{1, 1, 1, 1, 0, 0, 0}"/>
     <define name="STABILIZATION_INDI_NUM_THRUSTERS"          value="3"/>
     <define name="STABILIZATION_INDI_NUM_THRUSTERS_X"        value="2"/>
     <define name="TEST_STAB_HEEWING" value="FALSE"/> 
+    <define name="TEST_GUID_HEEWING" value="FALSE"/> 
     <define name="TEST_THRUST_Z_CONTROL" value="1"/>
     <define name="TEST_THRUST_X_CONTROL" value="1"/>
+    <define name="TEST_ACCELX_CONTROL" value="0"/>
+    <define name="TEST_ACCELY_CONTROL" value="0"/>
+    <define name="TEST_ACCELZ_CONTROL" value="0"/>
+    <define name="TEST_HEADING_CONTROL" value="0"/>
     <define name="TEST_HEADING_SP" value="0"/>   
     <define name="STABILIZATION_INDI_ACT_PREF" value="{0,0,0,8700,0,0,0}"/>
-
+    <define name="NAV_HYBRID_EXT_VISION_SETPOINT_MODE" value="TRUE"/> <!--only for more precise hovering when using optitrack-->
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-    <define name="MAX_BANK" value="20" unit="deg"/>
+    <define name="MAX_BANK" value="40" unit="deg"/>
     <define name="USE_SPEED_REF" value="TRUE"/>
   </section>
 
@@ -316,22 +324,22 @@
   </section>
 
   <section name="GUIDANCE_INDI">
-    <define name="GUIDANCE_INDI_RC_DEBUG" value="FALSE"/>
-    <define name="GUIDANCE_INDI_POS_GAIN" value="0.2"/>
-    <define name="GUIDANCE_INDI_SPEED_GAIN" value="0.8"/> <!--0.8-->
-    <define name="GUIDANCE_INDI_POS_GAINZ" value="0.6"/>
+    <define name="GUIDANCE_INDI_RC_DEBUG" value="TRUE"/>
+    <define name="GUIDANCE_INDI_POS_GAINX" value="0.68"/> <!--0.2-->
+    <define name="GUIDANCE_INDI_POS_GAINY" value="0.465"/> <!--0.2-->
+    <define name="GUIDANCE_INDI_SPEED_GAINX" value="1.2"/> <!--0.8-->
+    <define name="GUIDANCE_INDI_SPEED_GAINY" value="1.15"/> <!--0.8-->
+    <define name="GUIDANCE_INDI_POS_GAINZ" value="0.7"/>
     <define name="GUIDANCE_INDI_SPEED_GAINZ" value="1.5"/><!--1.5-->
     <define name="GUIDANCE_INDI_PITCH_LIFT_EFF" value="0.12"/>
-    <define name="GUIDANCE_INDI_PITCH_EFF_SCALING" value="0.6"/>
+    <define name="GUIDANCE_INDI_PITCH_EFF_SCALING" value="1.0"/>
     <define name="GUIDANCE_H_REF_MAX_SPEED" value="16.0"/> <!--not used-->
     <define name="GUIDANCE_INDI_MIN_THROTTLE" value="2000"/>
     <define name="GUIDANCE_INDI_MIN_THROTTLE_FWD" value="1000"/>
-    <define name="GUIDANCE_INDI_MIN_PITCH" value="-80."/> <!-- -80 before-->
-    <define name="GUIDANCE_INDI_MAX_PITCH" value="25."/> <!-- 25 before-->
     <define name="GUIDANCE_INDI_MAX_AIRSPEED" value="16.0"/>
     <define name="GUIDANCE_INDI_HEADING_BANK_GAIN" value="18.0"/>
     <define name="GUIDANCE_INDI_PITCH_OFFSET_GAIN" value="0.06"/>
-    <define name="GUIDANCE_INDI_FILTER_CUTOFF" value="1.5"/>
+    <define name="GUIDANCE_INDI_FILTER_CUTOFF" value="5"/>
     <define name="GUIDANCE_INDI_LINE_GAIN" value="0.7"/>
     <define name="FWD_SIDESLIP_GAIN" value="0.20"/>
     <define name="GUIDANCE_ESH_LIFT_EFF" value="1.0"/>
