@@ -222,6 +222,7 @@ float test_thrust_control = 0.0;
 float test_thrustx_control = 0.0;
 struct FloatEulers esh_test_att_sp;
 float esh_test_heading;
+float thrust_estimated[3];
 
 /**
  * Limit the maximum specific moment that can be compensated (units rad/s^2)
@@ -675,9 +676,12 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     // Compute estimated thrust
     struct FloatVect3 thrust_filt = { 0.f, 0.f, 0.f };
     for (i = 0; i < INDI_NUM_ACT; i++) {
-      thrust_filt.z += Bwls[3][i]* actuator_lowpass_filters[i].o[0];// * (int32_t) act_is_thruster_z[i];
+      thrust_filt.z += Bwls[3][i]* actuator_lowpass_filters[i].o[0] * (int32_t) act_is_thruster_z[i];
+      thrust_estimated[2] = thrust_filt.z;
 #if INDI_OUTPUTS == 5
-      thrust_filt.x += Bwls[4][i]* actuator_lowpass_filters[i].o[0];// * (int32_t) act_is_thruster_x[i];
+      thrust_filt.x += Bwls[4][i]* actuator_lowpass_filters[i].o[0] * (int32_t) act_is_thruster_x[i];
+      thrust_estimated[0] = thrust_filt.x;
+      //printf("thrust_filt.x: %f, thrust_filt.z: %f\n", thrust_filt.x, thrust_filt.z);
 #endif
     }
     // Add the current estimated thrust to the increment
