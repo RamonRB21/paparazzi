@@ -89,6 +89,7 @@ struct T1_attitude{
 struct T1_Model{
     float roll_eff_ail;
     float pitch_eff_ele;
+    float pitch_eff_mb;
     float yaw_eff_mr;
     float yaw_eff_ml;
     float yaw_eff_td;

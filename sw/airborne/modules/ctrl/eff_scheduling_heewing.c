@@ -229,9 +229,14 @@
 #define GUIDANCE_ESH_LIFT_EFF 1.0
 #endif
 
-// Fake airspeed for simulation purposes
-#ifndef ESH_FAKE_AIRSPEED
-#define ESH_FAKE_AIRSPEED 0.0
+// Speed at which propellers can go full forward
+#ifndef ESH_MIN_MT_SPEED
+#define ESH_MIN_MT_SPEED 7.0
+#endif
+
+// Minimum Mean Tilt at hovering
+#ifndef ESH_MIN_MT_HOVER
+#define ESH_MIN_MT_HOVER 8000
 #endif
 
 /* Effectiveness Matrix definition */
@@ -241,7 +246,6 @@ float G1G2_T1[ESH_EFF_MAT_ROWS_NB + 1][ESH_EFF_MAT_COLS_NB]      = {0}; //scaled
 
 float ctrl_surfaces_eff = 1;
 float esh_counter;
-float esh_fake_airspeed;
 
 struct FloatEulers eulers_zxy_ESH;
 
@@ -255,7 +259,6 @@ void  sum_copy_EFF_MAT(void);
 void  init_T1_Model(void);
 void  calc_G1_G2(void); 
 void stabilization_indi_set_wls_settings(void);
-inline void guidance_indi_hybrid_set_wls_settings(float body_v[3], float roll_angle, float pitch_angle);
 
 void eff_scheduling_heewing_init(void)
 {  
@@ -267,6 +270,7 @@ void init_T1_Model(void)
 { 
   T1.roll_eff_ail = ROLL_EFF_AIL;
   T1.pitch_eff_ele = PITCH_EFF_ELE;
+  T1.pitch_eff_mb = PITCH_EFF_MB;
   T1.yaw_eff_mr = YAW_EFF_MR;
   T1.yaw_eff_ml = YAW_EFF_ML;
   T1.yaw_eff_td = YAW_EFF_TD;
@@ -291,8 +295,6 @@ void init_T1_Model(void)
 
   T1.wls_min_mt = ESH_WLS_MIN_MT;
 
-  esh_fake_airspeed = ESH_FAKE_AIRSPEED;
-  
   // Inertia
   T1.I_XX = I_XX_0TILT;
   T1.I_YY = I_YY_0TILT; 
@@ -351,10 +353,10 @@ void eff_scheduling_heewing_update_tilt_angle(void)
 
 void eff_scheduling_heewing_update_thrust(void)
 {//Thrust SP is normalized between 0. and 1.
-  T1.mL.T = 3.5 * (actuator_state_filt_vect[ESH_CMD_MOTORL]) / (MAX_PPRZ);
-  Bound(T1.mL.T, 0. , 3.5)
   T1.mR.T = 3.5 * (actuator_state_filt_vect[ESH_CMD_MOTORR]) / (MAX_PPRZ);
   Bound(T1.mR.T, 0. , 3.5)
+  T1.mL.T = 3.5 * (actuator_state_filt_vect[ESH_CMD_MOTORL]) / (MAX_PPRZ);
+  Bound(T1.mL.T, 0. , 3.5)
   T1.mB.T = 3.5 * (actuator_state_filt_vect[ESH_CMD_MOTORB]) / (MAX_PPRZ);
   Bound(T1.mB.T, 0. , 3.5)
 
@@ -389,7 +391,7 @@ void calc_G1_G2(void)
   G1_T1[ESH_U][ESH_CMD_MOTORL]  =  0.567724 * (T1.thrust_eff_ml * T1.tiltl.cosr) / MASS;
   G2_T1[ESH_CMD_MOTORL]         =  0; //T1.mL.dMdud / T1.I_ZZ;
   // Motor Back 
-  G1_T1[ESH_Q][ESH_CMD_MOTORB]  = -0.24 * (PITCH_EFF_MB * T1.mB.dX) / T1.I_YY;
+  G1_T1[ESH_Q][ESH_CMD_MOTORB]  = -0.444444 * (T1.pitch_eff_mb * T1.mB.dX) / T1.I_YY;
   G1_T1[ESH_W][ESH_CMD_MOTORB]  = -0.568035 * T1.lift_eff_mb / MASS;
   G2_T1[ESH_CMD_MOTORB]         =  0; //-T1.mB.dMdud / T1.I_ZZ;
   // Motor Mean Tilt
@@ -411,84 +413,9 @@ void calc_G1_G2(void)
   G1_T1[ESH_P][ESH_CMD_AILERONS] = 1.0E-6 * T1.roll_eff_ail * ctrl_surfaces_eff * (T1.aero_coeff * T1.as2 * T1.span * ROLL_D2_AILERONS) / T1.I_XX;
  // Elevator
   G1_T1[ESH_Q][ESH_CMD_ELEVATOR] = 1.0E-6 * T1.pitch_eff_ele * ctrl_surfaces_eff * (T1.aero_coeff * T1.as2 * T1.chord * PITCH_D2_ELEVATOR) / T1.I_YY;
-
-  #if 0
-  if(esh_counter < 1000) {
-    printf("G1_MR_W: %f | ", G1_T1[ESH_W][ESH_CMD_MOTORR]);
-    printf("G1_ML_W: %f | ", G1_T1[ESH_W][ESH_CMD_MOTORL]);
-    printf("G1_MB_W: %f | ", G1_T1[ESH_W][ESH_CMD_MOTORB]);
-    printf("G1_MT_W: %f | ", G1_T1[ESH_W][ESH_CMD_MOTORMT]);
-    printf("\n");
-    printf("\n");
-    esh_counter++;
-  } else {
-    esh_counter = 0;
-  }
-  #endif
 }
 
-// ZXY Rotation to allocate gimbal lock at 90deg roll (low probability)
 void sum_copy_EFF_MAT(void) {
-  #if 0
-  for (int8_t i = 0; i < ESH_EFF_MAT_COLS_NB; i++) {
-    switch (i) {
-    case (ESH_CMD_MOTORR):
-    case (ESH_CMD_MOTORL):
-    case (ESH_CMD_MOTORMT):
-    case (ESH_CMD_MOTORTD):
-      G1G2_T1[ESH_PHI][i] = G1_T1[ESH_P][i] + (T1.att.sphi * T1.att.stheta / T1.att.ctheta) * G1_T1[ESH_Q][i] + (T1.att.cphi * T1.att.stheta / T1.att.ctheta) * (G1_T1[ESH_R][i] + G2_T1[i]);
-      G1G2_T1[ESH_THE][i] = (T1.att.cphi                                                  ) * G1_T1[ESH_Q][i] + (-T1.att.sphi                               ) * (G1_T1[ESH_R][i] + G2_T1[i]);
-      G1G2_T1[ESH_PSI][i] = (T1.att.sphi / T1.att.ctheta                                  ) * G1_T1[ESH_Q][i] + (T1.att.cphi / T1.att.ctheta                ) * (G1_T1[ESH_R][i] + G2_T1[i]);
-      G1G2_T1[ESH_D][i]   = (-T1.att.cphi * T1.att.stheta                                           ) * G1_T1[ESH_U][i] + (T1.att.cphi * T1.att.ctheta                                            ) * G1_T1[ESH_W][i];
-      G1G2_T1[ESH_N][i]   = (T1.att.cpsi * T1.att.ctheta - T1.att.spsi * T1.att.sphi * T1.att.stheta) * G1_T1[ESH_U][i] + (T1.att.cpsi * T1.att.stheta + T1.att.spsi * T1.att.sphi * T1.att.ctheta) * G1_T1[ESH_W][i];
-      G1G2_T1[ESH_E][i]   = (T1.att.spsi * T1.att.ctheta + T1.att.cpsi * T1.att.sphi * T1.att.stheta) * G1_T1[ESH_U][i] + (T1.att.spsi * T1.att.stheta - T1.att.cpsi * T1.att.sphi * T1.att.ctheta) * G1_T1[ESH_W][i];
-      break;
-    case (ESH_CMD_MOTORB):  
-      G1G2_T1[ESH_PHI][i] = (T1.att.sphi * T1.att.stheta / T1.att.ctheta) * G1_T1[ESH_Q][i] + (T1.att.cphi * T1.att.stheta / T1.att.ctheta) * G2_T1[i];
-      G1G2_T1[ESH_THE][i] = (T1.att.cphi                                ) * G1_T1[ESH_Q][i] + (-T1.att.sphi                               ) * G2_T1[i];
-      G1G2_T1[ESH_PSI][i] = (T1.att.sphi / T1.att.ctheta                ) * G1_T1[ESH_Q][i] + (T1.att.cphi / T1.att.ctheta                ) * G2_T1[i];
-      G1G2_T1[ESH_D][i]   = (T1.att.cphi * T1.att.ctheta                                            ) * G1_T1[ESH_W][i];
-      G1G2_T1[ESH_N][i]   = (T1.att.cpsi * T1.att.stheta + T1.att.spsi * T1.att.sphi * T1.att.ctheta) * G1_T1[ESH_W][i];
-      G1G2_T1[ESH_E][i]   = (T1.att.spsi * T1.att.stheta - T1.att.cpsi * T1.att.sphi * T1.att.ctheta) * G1_T1[ESH_W][i];
-      break;
-    case (ESH_CMD_AILERONS):
-      G1G2_T1[ESH_PHI][i] = G1_T1[ESH_P][i] + (T1.att.cphi * T1.att.stheta / T1.att.ctheta) * (G1_T1[ESH_R][i] + G2_T1[i]);
-      G1G2_T1[ESH_THE][i] =                   (-T1.att.sphi                               ) * (G1_T1[ESH_R][i] + G2_T1[i]);
-      G1G2_T1[ESH_PSI][i] =                   (T1.att.cphi / T1.att.ctheta                ) * (G1_T1[ESH_R][i] + G2_T1[i]);
-      G1G2_T1[ESH_D][i]   = 0.0;
-      G1G2_T1[ESH_N][i]   = 0.0;
-      G1G2_T1[ESH_E][i]   = 0.0;
-      break; 
-    case (ESH_CMD_ELEVATOR): 
-      G1G2_T1[ESH_PHI][i] = (T1.att.sphi * T1.att.stheta / T1.att.ctheta) * G1_T1[ESH_Q][i];
-      G1G2_T1[ESH_THE][i] = (T1.att.cphi                                ) * G1_T1[ESH_Q][i];
-      G1G2_T1[ESH_PSI][i] = (T1.att.sphi / T1.att.ctheta                ) * G1_T1[ESH_Q][i];
-      G1G2_T1[ESH_D][i]   = 0.0;
-      G1G2_T1[ESH_N][i]   = 0.0;
-      G1G2_T1[ESH_E][i]   = 0.0;
-      break;
-    default:
-      break;
-    }
-  }
-  
-  for (int8_t i = 0; i < ESH_EFF_MAT_ROWS_NB; i++) {
-    for (int8_t j = 0; j < ESH_EFF_MAT_COLS_NB; j++) {
-      float abs = fabs(G1_T1[i][j]);
-      switch (i) {
-        case (ESH_PHI):
-        case (ESH_THE):
-        case (ESH_PSI):
-        case (ESH_N):
-        case (ESH_D):
-          if (abs < FLT_CUTOFF_FREQ) {
-            G1_T1[i][j] = 0.0;
-          }
-          break;
-      }
-    }
-  }
-  #endif
   for (int8_t i = 0; i < INDI_OUTPUTS; i++) {
     for (int8_t j = 0; j < INDI_NUM_ACT; j++) {
         g1g2[i][j] = G1_T1[i][j] / INDI_G_SCALING;
@@ -548,60 +475,8 @@ void stabilization_indi_set_wls_settings(void)
 //TODO
 // Override standard LIFT_D function
 float guidance_indi_get_liftd(float airspeed, float theta UNUSED) {
-  return (-0.01 * T1.aero_coeff * airspeed * airspeed * LIFT_D2_ALPHA);
+  return (-T1.aero_coeff * airspeed * airspeed * LIFT_D2_ALPHA);
 }
-
-#if 1
-void guidance_indi_hybrid_set_wls_settings(float body_v[3], float roll_angle, float pitch_angle)
-{
-  // Weights evolution
-  //float Wu_original[GUIDANCE_INDI_HYBRID_U] = GUIDANCE_INDI_WLS_WU;
-  //float Wv_original[GUIDANCE_INDI_HYBRID_V] = GUIDANCE_INDI_WLS_PRIORITIES;
-
-  //wls_guid_p.Wu[ESH_CMD_PITCH] = Wu_original[ESH_CMD_PITCH] + 5 * T1.as;
-  //wls_guid_p.Wu[ESH_CMD_FX] = Wu_original[ESH_CMD_FX] + 300 * (1 - pow(M_E, (T1.as / 4.0)));
-  //wls_guid_p.Wv[0] = Wv_original[0] + 3 * T1.as; //maybe could evolute with tilt angle
-
-  //Set Limits
-  float max_pitch_limit_rad = RadOfDeg(GUIDANCE_INDI_MAX_PITCH);
-  float min_pitch_limit_rad = RadOfDeg(GUIDANCE_INDI_MIN_PITCH);
-
-  // float pitch_pref_rad = RadOfDeg(guidance_indi_pitch_pref_deg);
-
-  //int thrust_z_cmd = (actuator_state_filt_vect[ESH_CMD_MOTORR] * T1.tiltr.sinr + actuator_state_filt_vect[ESH_CMD_MOTORL] * T1.tiltl.sinr + actuator_state_filt_vect[ESH_CMD_MOTORB])/3;
-  //int thrust_x_cmd = (actuator_state_filt_vect[ESH_CMD_MOTORR] * T1.tiltr.cosr + actuator_state_filt_vect[ESH_CMD_MOTORL] * T1.tiltl.cosr)/2;
-  //printf("ThrustX: %d | ThrustZ %d\n", thrust_x_cmd, thrust_z_cmd);
-  
-  // Set lower limits
-  wls_guid_p.u_min[ESH_CMD_ROLL]  = -guidance_indi_max_bank - roll_angle;
-  wls_guid_p.u_min[ESH_CMD_PITCH] =  min_pitch_limit_rad - pitch_angle;
-  wls_guid_p.u_min[ESH_CMD_FZ]    = GUIDANCE_ESH_LIFT_EFF * ((MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORR]) * g1g2[ESH_W][ESH_CMD_MOTORR] + 
-                                    (MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORL]) * g1g2[ESH_W][ESH_CMD_MOTORL] + 
-                                    (MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORB]) * g1g2[ESH_W][ESH_CMD_MOTORB] + 
-                                    (MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORMT]) * g1g2[ESH_W][ESH_CMD_MOTORMT]);
-  wls_guid_p.u_min[ESH_CMD_FX]    = -actuator_state_filt_vect[ESH_CMD_MOTORR] * g1g2[ESH_U][ESH_CMD_MOTORR] 
-                                    -actuator_state_filt_vect[ESH_CMD_MOTORL] * g1g2[ESH_U][ESH_CMD_MOTORL] 
-                                    -actuator_state_filt_vect[ESH_CMD_MOTORMT] * g1g2[ESH_U][ESH_CMD_MOTORMT];
-
-  // Set upper limits
-  wls_guid_p.u_max[ESH_CMD_ROLL]  =  guidance_indi_max_bank - roll_angle;
-  wls_guid_p.u_max[ESH_CMD_PITCH] =  max_pitch_limit_rad - pitch_angle;
-  wls_guid_p.u_max[ESH_CMD_FZ]    = -GUIDANCE_ESH_LIFT_EFF * (actuator_state_filt_vect[ESH_CMD_MOTORR] * g1g2[ESH_W][ESH_CMD_MOTORR] +
-                                    actuator_state_filt_vect[ESH_CMD_MOTORL] * g1g2[ESH_W][ESH_CMD_MOTORL] +
-                                    actuator_state_filt_vect[ESH_CMD_MOTORB] * g1g2[ESH_W][ESH_CMD_MOTORB] +
-                                    actuator_state_filt_vect[ESH_CMD_MOTORMT] * g1g2[ESH_W][ESH_CMD_MOTORMT]);
-  wls_guid_p.u_max[ESH_CMD_FX]    = (MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORR]) * g1g2[ESH_U][ESH_CMD_MOTORR] + 
-                                    (MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORL]) * g1g2[ESH_U][ESH_CMD_MOTORL] + 
-                                    (MAX_PPRZ - actuator_state_filt_vect[ESH_CMD_MOTORMT]) * g1g2[ESH_U][ESH_CMD_MOTORMT];
-
-  // Set prefered states
-  wls_guid_p.u_pref[ESH_CMD_ROLL]  = -roll_angle; // prefered delta roll angle
-  wls_guid_p.u_pref[ESH_CMD_PITCH] = -pitch_angle; // + pitch_pref_rad;// prefered delta pitch angle
-
-  wls_guid_p.u_pref[ESH_CMD_FZ]    =  wls_guid_p.u_max[ESH_CMD_FZ]; // Low thrust better for efficiency
-  wls_guid_p.u_pref[ESH_CMD_FX]    =  body_v[0]; // solve the body acceleration
-}
-#endif
 
 float get_max_pusher_thrust(void) {
   return MAX_PPRZ * g1g2[ESH_U][ESH_CMD_MOTORR] + MAX_PPRZ * g1g2[ESH_U][ESH_CMD_MOTORL] + 
