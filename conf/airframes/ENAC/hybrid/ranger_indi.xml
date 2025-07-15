@@ -324,7 +324,7 @@
   </section>
 
   <section name="GUIDANCE_INDI">
-    <define name="GUIDANCE_INDI_RC_DEBUG" value="TRUE"/>
+    <define name="GUIDANCE_INDI_RC_DEBUG" value="FALSE"/>
     <define name="GUIDANCE_INDI_POS_GAINX" value="0.68"/> <!--0.2-->
     <define name="GUIDANCE_INDI_POS_GAINY" value="0.465"/> <!--0.2-->
     <define name="GUIDANCE_INDI_SPEED_GAINX" value="1.2"/> <!--0.8-->
