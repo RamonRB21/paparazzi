@@ -169,7 +169,7 @@
       <fcs_function name="tilt_right">
         <function>
           <sum>
-            <property>fcs/TILT</property>
+            <property>fcs/MEAN_TILT</property>
             <property>fcs/DELTA_TILT</property>
           </sum>
         </function>
@@ -225,7 +225,7 @@
       <fcs_function>
         <function>
           <sum>
-            <property>fcs/TILT</property>
+            <property>fcs/MEAN_TILT</property>
             <property>-fcs/DELTA_TILT</property>
           </sum>
         </function>
@@ -297,7 +297,7 @@
     <property>fcs/YAW</property>
     <property>fcs/DELTA_TILT</property>
     <property>fcs/THRUST</property>
-    <property>fcs/TILT</property>
+    <property>fcs/MEAN_TILT</property>
     <property>fcs/motor_right_lag</property>
     <property>fcs/motor_left_lag</property>
     <property>fcs/motor_tail_lag</property>
