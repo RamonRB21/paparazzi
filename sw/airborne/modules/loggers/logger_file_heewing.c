@@ -70,6 +70,7 @@ static FILE *logger_file = NULL;
  */
 static void logger_file_write_header(FILE *file) {
   fprintf(file, "time,");
+  fprintf(file, "airspeed,");
   fprintf(file, "pos_x,pos_y,pos_z,");
   fprintf(file, "vel_x,vel_y,vel_z,");
   fprintf(file, "att_phi,att_theta,att_psi,");
@@ -93,6 +94,7 @@ static void logger_file_write_row(FILE *file) {
   struct FloatRates *rates = stateGetBodyRates_f();
 
   fprintf(file, "%f,", get_sys_time_float());
+  fprintf(file, "%f,", stateGetAirspeed_f()); 
   fprintf(file, "%f,%f,%f,", pos->x, pos->y, pos->z);
   fprintf(file, "%f,%f,%f,", vel->x, vel->y, vel->z);
   fprintf(file, "%f,%f,%f,", att->phi*180/M_PI, att->theta*180/M_PI, att->psi*180/M_PI);
