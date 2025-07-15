@@ -44,13 +44,15 @@
 // they are probably limited by the update rate of your GPS. The default
 // values are tuned for 4 Hz GPS updates. If you have high speed position updates, the
 // gains can be higher, depending on the speed of the inner loop.
-#ifndef GUIDANCE_INDI_SPEED_GAIN
-#define GUIDANCE_INDI_SPEED_GAIN 1.8
+#ifndef GUIDANCE_INDI_SPEED_GAINX
+#define GUIDANCE_INDI_SPEED_GAINX 1.8
+#define GUIDANCE_INDI_SPEED_GAINY 1.8
 #define GUIDANCE_INDI_SPEED_GAINZ 1.8
 #endif
 
-#ifndef GUIDANCE_INDI_POS_GAIN
-#define GUIDANCE_INDI_POS_GAIN 0.5
+#ifndef GUIDANCE_INDI_POS_GAINX
+#define GUIDANCE_INDI_POS_GAINX 0.5
+#define GUIDANCE_INDI_POS_GAINY 0.5
 #define GUIDANCE_INDI_POS_GAINZ 0.5
 #endif
 
@@ -108,10 +110,12 @@
 #endif
 
 struct guidance_indi_hybrid_params gih_params = {
-  .pos_gain = GUIDANCE_INDI_POS_GAIN,
+  .pos_gainx = GUIDANCE_INDI_POS_GAINX,
+  .pos_gainy = GUIDANCE_INDI_POS_GAINY,
   .pos_gainz = GUIDANCE_INDI_POS_GAINZ,
 
-  .speed_gain = GUIDANCE_INDI_SPEED_GAIN,
+  .speed_gainx = GUIDANCE_INDI_SPEED_GAINX,
+  .speed_gainy = GUIDANCE_INDI_SPEED_GAINY,
   .speed_gainz = GUIDANCE_INDI_SPEED_GAINZ,
 
   .heading_bank_gain = GUIDANCE_INDI_HEADING_BANK_GAIN,
@@ -211,6 +215,17 @@ static void guidance_indi_filter_thrust(void);
 #define GUIDANCE_INDI_COORDINATED_TURN_AIRSPEED_MARGIN 0.0
 #endif
 
+#ifdef TEST_GUID_HEEWING
+bool test_guid_switch = TEST_GUID_HEEWING;
+#else
+bool test_guid_switch = false;
+#endif
+
+float test_accelx_control = 0.0;
+float test_accely_control = 0.0;
+float test_accelz_control = 0.0;
+float test_heading_control = 0.0;
+
 float inv_eff[4];
 
 // Max bank angle in radians
@@ -277,7 +292,6 @@ struct WLS_t wls_guid_p = {
 float v_gih[3];
 
 float thrust_vect[3];
-float gi_pitch_eff_scaling;
 
 // Filters
 float filter_cutoff = GUIDANCE_INDI_FILTER_CUTOFF;
@@ -430,6 +444,15 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   // set global accel sp variable FIXME clean this
   sp_accel = *accel_sp;
 
+  #if 1
+  if (test_guid_switch) {
+    sp_accel.x = test_accelx_control;
+    sp_accel.y = test_accely_control;
+    sp_accel.z = test_accelz_control;
+    heading_sp = test_heading_control;
+  }
+  #endif
+
   /* Obtain eulers with zxy rotation order */
   float_eulers_of_quat_zxy(&eulers_zxy, stateGetNedToBodyQuat_f());
 
@@ -571,6 +594,21 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   else {
     // heading is free and controlled by guidance
     guidance_indi_hybrid_heading_sp += omega / PERIODIC_FREQUENCY;
+    #if 1
+    float airspeed = stateGetAirspeed_f();
+    if (airspeed < 10.0f) {
+    // heading points towards the hovering direction
+    struct NedCoor_f *groundspeed = stateGetSpeedNed_f();
+    float groundspeed_mag = sqrtf(groundspeed->x * groundspeed->x + groundspeed->y * groundspeed->y);
+    if (groundspeed_mag > 3.0f) {
+        float heading_sp = atan2f(groundspeed->y, groundspeed->x);
+    guidance_indi_hybrid_heading_sp = heading_sp;
+    } else {
+      // if we are not moving, fix heading at 0
+      guidance_indi_hybrid_heading_sp = eulers_zxy.psi;
+    }
+    }
+    #endif
     FLOAT_ANGLE_NORMALIZE(guidance_indi_hybrid_heading_sp);
     // limit heading setpoint to be within bounds of current heading
 #ifdef STABILIZATION_ATTITUDE_SP_PSI_DELTA_LIMIT
@@ -713,7 +751,7 @@ static struct FloatVect3 compute_accel_from_speed_sp(void)
     BoundAbs(sp_accel_b.y, GUIDANCE_INDI_MAX_LAT_ACCEL);
 
     // Control the airspeed
-    sp_accel_b.x = (gi_airspeed_sp - airspeed) * gih_params.speed_gain;
+    sp_accel_b.x = (gi_airspeed_sp - airspeed) * gih_params.speed_gainx;
 
     accel_sp.x = cpsi * sp_accel_b.x - spsi * sp_accel_b.y;
     accel_sp.y = spsi * sp_accel_b.x + cpsi * sp_accel_b.y;
@@ -735,8 +773,8 @@ static struct FloatVect3 compute_accel_from_speed_sp(void)
     gi_speed_sp.x = cpsi * speed_sp_b_x - spsi * speed_sp_b_y;
     gi_speed_sp.y = spsi * speed_sp_b_x + cpsi * speed_sp_b_y;
 
-    accel_sp.x = (gi_speed_sp.x - stateGetSpeedNed_f()->x) * gih_params.speed_gain;
-    accel_sp.y = (gi_speed_sp.y - stateGetSpeedNed_f()->y) * gih_params.speed_gain;
+    accel_sp.x = (gi_speed_sp.x - stateGetSpeedNed_f()->x) * gih_params.speed_gainx;
+    accel_sp.y = (gi_speed_sp.y - stateGetSpeedNed_f()->y) * gih_params.speed_gainy;
     accel_sp.z = (gi_speed_sp.z - stateGetSpeedNed_f()->z) * gih_params.speed_gainz;
   }
 
@@ -786,8 +824,8 @@ struct StabilizationSetpoint guidance_indi_run_mode(bool in_flight UNUSED, struc
     //Linear controller to find the acceleration setpoint from position and velocity
     pos_err.x = POS_FLOAT_OF_BFP(gh->ref.pos.x) - stateGetPositionNed_f()->x;
     pos_err.y = POS_FLOAT_OF_BFP(gh->ref.pos.y) - stateGetPositionNed_f()->y;
-    gi_speed_sp.x = pos_err.x * gih_params.pos_gain + SPEED_FLOAT_OF_BFP(gh->ref.speed.x);
-    gi_speed_sp.y = pos_err.y * gih_params.pos_gain + SPEED_FLOAT_OF_BFP(gh->ref.speed.y);
+    gi_speed_sp.x = pos_err.x * gih_params.pos_gainx + SPEED_FLOAT_OF_BFP(gh->ref.speed.x);
+    gi_speed_sp.y = pos_err.y * gih_params.pos_gainy + SPEED_FLOAT_OF_BFP(gh->ref.speed.y);
     if (v_mode == GUIDANCE_INDI_HYBRID_V_POS) {
       pos_err.z = POS_FLOAT_OF_BFP(gv->z_ref) - stateGetPositionNed_f()->z;
       gi_speed_sp.z = bound_vz_sp(pos_err.z * gih_params.pos_gainz + SPEED_FLOAT_OF_BFP(gv->zd_ref));
@@ -832,8 +870,8 @@ struct StabilizationSetpoint guidance_indi_run_mode(bool in_flight UNUSED, struc
     }
     accel_sp = compute_accel_from_speed_sp(); // compute accel sp in case z control is required
     // overwrite accel X and Y
-    accel_sp.x = (gi_speed_sp.x - stateGetSpeedNed_f()->x) * gih_params.speed_gain + ACCEL_FLOAT_OF_BFP(gh->ref.accel.x);
-    accel_sp.y = (gi_speed_sp.y - stateGetSpeedNed_f()->y) * gih_params.speed_gain + ACCEL_FLOAT_OF_BFP(gh->ref.accel.y);
+    accel_sp.x = (gi_speed_sp.x - stateGetSpeedNed_f()->x) * gih_params.speed_gainx + ACCEL_FLOAT_OF_BFP(gh->ref.accel.x);
+    accel_sp.y = (gi_speed_sp.y - stateGetSpeedNed_f()->y) * gih_params.speed_gainy + ACCEL_FLOAT_OF_BFP(gh->ref.accel.y);
     if (v_mode == GUIDANCE_INDI_HYBRID_V_ACCEL) {
       accel_sp.z = (gi_speed_sp.z - stateGetSpeedNed_f()->z) * gih_params.speed_gainz + ACCEL_FLOAT_OF_BFP(gv->zdd_ref); // overwrite accel
     }

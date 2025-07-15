@@ -74,9 +74,11 @@ extern struct StabilizationSetpoint guidance_indi_run_mode(bool in_flight, struc
 extern void guidance_set_min_max_airspeed(float min_airspeed, float max_airspeed);
 
 struct guidance_indi_hybrid_params {
-  float pos_gain;
+  float pos_gainx;
+  float pos_gainy;
   float pos_gainz;
-  float speed_gain;
+  float speed_gainx;
+  float speed_gainy;
   float speed_gainz;
   float heading_bank_gain;
   float liftd_asq;
@@ -102,7 +104,11 @@ extern float gi_unbounded_airspeed_sp;
 extern float guidance_indi_thrust_z_eff;
 extern float thrust_vect[3];
 extern struct FloatEulers guidance_euler_cmd;
-extern float gi_pitch_eff_scaling;
+extern bool test_guid_switch;
+extern float test_accelx_control;
+extern float test_accely_control;
+extern float test_accelz_control;
+extern float test_heading_control;
 
 extern float guidance_indi_specific_force_gain;
 extern bool take_heading_control;
