@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Ramon Revilla Bouso <>
+ * Copyright (C) 2025 Ramon Revilla Bouso <ramonrevilla21@gmail.com>
  *
  * This file is part of paparazzi.
  *
@@ -24,60 +24,17 @@
  *
  */
 
-#include "firmwares/rotorcraft/guidance/guidance_indi_hybrid.h"
 #include "firmwares/rotorcraft/guidance/guidance_indi_hybrid_tiltrotor.h"
-#include "filters/low_pass_filter.h"
-#include "state.h"
-#include "generated/modules.h"
 
-#ifndef GUIDANCE_INDI_ROLL_EFF_SCALING
-#define GUIDANCE_INDI_ROLL_EFF_SCALING 1.0
-#endif
+#include "firmwares/rotorcraft/guidance/guidance_indi_hybrid.h"
 
 #ifndef GUIDANCE_INDI_PITCH_EFF_SCALING
 #define GUIDANCE_INDI_PITCH_EFF_SCALING 1.0
 #endif
 
-#ifndef GUIDANCE_INDI_LIFT_EFF_SCALING
-#define GUIDANCE_INDI_LIFT_EFF_SCALING 1.0
-#endif
-
-#ifndef GUIDANCE_INDI_THRUST_EFF_SCALING
-#define GUIDANCE_INDI_THRUST_EFF_SCALING 1.0
-#endif
-
-// WLS Guidance Roll Weight
-#ifndef ESH_WLS_GUID_ROLL
-#define ESH_WLS_GUID_ROLL 1000
-#endif
-
-// WLS Guidance Pitch Weight
-#ifndef ESH_WLS_GUID_PITCH
-#define ESH_WLS_GUID_PITCH 1000
-#endif
-
-// WLS Guidance FZ Weight
-#ifndef ESH_WLS_GUID_FZ
-#define ESH_WLS_GUID_FZ 200
-#endif
-
-// WLS Guidance FX Weight
-#ifndef ESH_WLS_GUID_FX
-#define ESH_WLS_GUID_FX 100
-#endif
-
-float gi_roll_eff_scaling = GUIDANCE_INDI_ROLL_EFF_SCALING;
 float gi_pitch_eff_scaling = GUIDANCE_INDI_PITCH_EFF_SCALING;
-float gi_lift_eff_scaling = GUIDANCE_INDI_LIFT_EFF_SCALING;
-float gi_thrust_eff_scaling = GUIDANCE_INDI_THRUST_EFF_SCALING;
 
 float bodyx_filter_cutoff = 0.2;
-
-float wls_guid_roll = ESH_WLS_GUID_ROLL;
-float wls_guid_pitch = ESH_WLS_GUID_PITCH;
-float wls_guid_fz = ESH_WLS_GUID_FZ;
-float wls_guid_fx = ESH_WLS_GUID_FX;
-
 float bodyz_filter_cutoff = 0.2;
 
 Butterworth2LowPass accel_bodyx_filt;
@@ -134,31 +91,31 @@ void guidance_indi_calcg_wing(float Gmat[GUIDANCE_INDI_HYBRID_V][GUIDANCE_INDI_H
   float cpsi = cosf(eulers_zxy.psi);
 
   /*Force resultants*/
-  float fx = MASS * accel_bodyx_filt.o[0];//thrust_estimated[0] * gi_roll_eff_scaling;
-  float fz = MASS * accel_bodyz_filt.o[0];//thrust_estimated[2];
+  float fx = MASS * accel_bodyx_filt.o[0];
+  float fz = MASS * accel_bodyz_filt.o[0];
 
   // get the derivative of the lift wrt to theta
   float dfz = guidance_indi_get_liftd(stateGetAirspeed_f(), eulers_zxy.theta);
 
   // dPhi (Roll)
-  Gmat[0][0] = fx * (-spsi * cphi * stheta) + fz * (spsi * cphi * ctheta) * gi_roll_eff_scaling;
-  Gmat[1][0] = fx * (cpsi * cphi * stheta) + fz * (-cpsi * cphi * ctheta) * gi_roll_eff_scaling;
-  Gmat[2][0] = fx * (sphi * stheta) + fz * (-sphi * ctheta) * gi_roll_eff_scaling;
+  Gmat[GIHT_X][GIHT_CMD_ROLL] = fx * (-spsi * cphi * stheta) + fz * (spsi * cphi * ctheta);
+  Gmat[GIHT_Y][GIHT_CMD_ROLL] = fx * (cpsi * cphi * stheta)  + fz * (-cpsi * cphi * ctheta);
+  Gmat[GIHT_Z][GIHT_CMD_ROLL] = fx * (sphi * stheta)         + fz * (-sphi * ctheta);
 
   // dTheta (Pitch)
-  Gmat[0][1] = fx * (-cpsi * stheta - spsi * sphi * ctheta) + fz * (cpsi * ctheta - spsi * sphi * stheta) * gi_pitch_eff_scaling + (cpsi * stheta + spsi * sphi * ctheta) * dfz;
-  Gmat[1][1] = fx * (-spsi * stheta + cpsi * sphi * ctheta) + fz * (spsi * ctheta + cpsi * sphi * stheta) * gi_pitch_eff_scaling + (spsi * stheta - cpsi * sphi * ctheta) * dfz;
-  Gmat[2][1] = fx * (-cphi * ctheta)                        + fz * (-cphi * stheta) * gi_pitch_eff_scaling                       + cphi * ctheta * dfz;
+  Gmat[GIHT_X][GIHT_CMD_PITCH] = fx * (-cpsi * stheta - spsi * sphi * ctheta) + fz * (cpsi * ctheta - spsi * sphi * stheta) * gi_pitch_eff_scaling + (cpsi * stheta + spsi * sphi * ctheta) * dfz;
+  Gmat[GIHT_Y][GIHT_CMD_PITCH] = fx * (-spsi * stheta + cpsi * sphi * ctheta) + fz * (spsi * ctheta + cpsi * sphi * stheta) * gi_pitch_eff_scaling + (spsi * stheta - cpsi * sphi * ctheta) * dfz;
+  Gmat[GIHT_Z][GIHT_CMD_PITCH] = fx * (-cphi * ctheta)                        + fz * (-cphi * stheta) * gi_pitch_eff_scaling                       + cphi * ctheta * dfz;
 
   // dfz
-  Gmat[0][2] = (cpsi * stheta + spsi * sphi * ctheta) * gi_lift_eff_scaling;
-  Gmat[1][2] = (spsi * stheta - cpsi * sphi * ctheta) * gi_lift_eff_scaling; 
-  Gmat[2][2] = cphi * ctheta * gi_lift_eff_scaling;
+  Gmat[GIHT_X][GIHT_CMD_FZ] = (cpsi * stheta + spsi * sphi * ctheta);
+  Gmat[GIHT_Y][GIHT_CMD_FZ] = (spsi * stheta - cpsi * sphi * ctheta); 
+  Gmat[GIHT_Z][GIHT_CMD_FZ] = cphi * ctheta;
 
   // dfx
-  Gmat[0][3]  =  (cpsi * ctheta - spsi * sphi * stheta) * gi_thrust_eff_scaling; //0.2 for thrust scaling gives better results 
-  Gmat[1][3]  =  (spsi * ctheta + cpsi * sphi * stheta) * gi_thrust_eff_scaling;
-  Gmat[2][3]  = -stheta * cphi * gi_thrust_eff_scaling;
+  Gmat[GIHT_X][GIHT_CMD_FX]  =  (cpsi * ctheta - spsi * sphi * stheta);
+  Gmat[GIHT_Y][GIHT_CMD_FX]  =  (spsi * ctheta + cpsi * sphi * stheta);
+  Gmat[GIHT_Z][GIHT_CMD_FX]  = -stheta * cphi;
 
   body_v[GIHT_X] =  a_diff.x;
   body_v[GIHT_Y] =  a_diff.y;
@@ -169,34 +126,28 @@ void guidance_indi_calcg_wing(float Gmat[GUIDANCE_INDI_HYBRID_V][GUIDANCE_INDI_H
 void guidance_indi_hybrid_set_wls_settings(float body_v[3], float roll_angle, float pitch_angle)
 {
   // Weights evolution
-  //float Wu_original[GUIDANCE_INDI_HYBRID_U] = GUIDANCE_INDI_WLS_WU;
-  //float Wv_original[GUIDANCE_INDI_HYBRID_V] = GUIDANCE_INDI_WLS_PRIORITIES;
+  float Wu_original[GUIDANCE_INDI_HYBRID_U] = GUIDANCE_INDI_WLS_WU;
+  float Wv_original[GUIDANCE_INDI_HYBRID_V] = GUIDANCE_INDI_WLS_PRIORITIES;
 
-  //wls_guid_p.Wu[ESH_CMD_PITCH] = Wu_original[ESH_CMD_PITCH] + 5 * T1.as;
-  //wls_guid_p.Wu[ESH_CMD_FX] = Wu_original[ESH_CMD_FX] + 300 * (1 - pow(M_E, (T1.as / 4.0)));
-  //wls_guid_p.Wv[0] = Wv_original[0] + 3 * T1.as; //maybe could evolute with tilt angle
-
-  wls_guid_p.Wu[ESH_CMD_ROLL] = wls_guid_roll;
-  wls_guid_p.Wu[ESH_CMD_PITCH] = wls_guid_pitch;
-  wls_guid_p.Wu[ESH_CMD_FZ] = wls_guid_fz;
-  wls_guid_p.Wu[ESH_CMD_FX] = wls_guid_fx;
+  wls_guid_p.Wu[ESH_CMD_PITCH] = Wu_original[ESH_CMD_PITCH] + 5 * T1.as;
+  wls_guid_p.Wu[ESH_CMD_FX] = Wu_original[ESH_CMD_FX] + 300 * (1 - pow(M_E, (T1.as / 4.0)));
+  wls_guid_p.Wv[0] = Wv_original[0] + 3 * T1.as; //maybe could evolute with tilt angle
  
   // Set lower limits
-  wls_guid_p.u_min[ESH_CMD_ROLL]  = -RadOfDeg(20) - roll_angle;
-  wls_guid_p.u_min[ESH_CMD_PITCH] = -RadOfDeg(80) - pitch_angle;
+  wls_guid_p.u_min[ESH_CMD_ROLL]  = -RadOfDeg(40) - roll_angle;
+  wls_guid_p.u_min[ESH_CMD_PITCH] = -RadOfDeg(40) - pitch_angle;
   wls_guid_p.u_min[ESH_CMD_FZ]    = -20 - MASS * accel_bodyz_filt.o[0];
   wls_guid_p.u_min[ESH_CMD_FX]    = 0 - MASS * accel_bodyx_filt.o[0];
 
   // Set upper limits
-  wls_guid_p.u_max[ESH_CMD_ROLL]  = RadOfDeg(20) - roll_angle;
-  wls_guid_p.u_max[ESH_CMD_PITCH] = RadOfDeg(25) - pitch_angle;
+  wls_guid_p.u_max[ESH_CMD_ROLL]  = RadOfDeg(40) - roll_angle;
+  wls_guid_p.u_max[ESH_CMD_PITCH] = RadOfDeg(40) - pitch_angle;
   wls_guid_p.u_max[ESH_CMD_FZ]    = 0 - MASS * accel_bodyz_filt.o[0];
   wls_guid_p.u_max[ESH_CMD_FX]    = 20 - MASS * accel_bodyx_filt.o[0];
 
   // Set prefered states
   wls_guid_p.u_pref[ESH_CMD_ROLL]  = -roll_angle; // prefered delta roll angle
-  wls_guid_p.u_pref[ESH_CMD_PITCH] = -pitch_angle; // + pitch_pref_rad;// prefered delta pitch angle
-
-  wls_guid_p.u_pref[ESH_CMD_FZ]    =  MASS * accel_bodyz_filt.o[0];//thrust_estimated[2] // Low thrust better for efficiency
-  wls_guid_p.u_pref[ESH_CMD_FX]    =  MASS * accel_bodyx_filt.o[0];//thrust_estimated[0] // solve the body acceleration
+  wls_guid_p.u_pref[ESH_CMD_PITCH] = -pitch_angle; // prefered delta pitch angle
+  wls_guid_p.u_pref[ESH_CMD_FZ]    =  MASS * accel_bodyz_filt.o[0];
+  wls_guid_p.u_pref[ESH_CMD_FX]    =  MASS * accel_bodyx_filt.o[0];
 }

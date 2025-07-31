@@ -104,11 +104,6 @@ extern float gi_unbounded_airspeed_sp;
 extern float guidance_indi_thrust_z_eff;
 extern float thrust_vect[3];
 extern struct FloatEulers guidance_euler_cmd;
-extern bool test_guid_switch;
-extern float test_accelx_control;
-extern float test_accely_control;
-extern float test_accelz_control;
-extern float test_heading_control;
 
 extern float guidance_indi_specific_force_gain;
 extern bool take_heading_control;

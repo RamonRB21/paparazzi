@@ -104,7 +104,7 @@
 struct WLS_t wls_stab_p = {
   .nu        = INDI_NUM_ACT,
   .nv        = INDI_OUTPUTS,
-  .gamma_sq  = 10000.0,
+  .gamma_sq  = 1000.0,
   .v         = {0.0},
 #ifdef STABILIZATION_INDI_WLS_PRIORITIES
   .Wv        =  STABILIZATION_INDI_WLS_PRIORITIES,
@@ -212,16 +212,6 @@ float act_first_order_cutoff[INDI_NUM_ACT] = STABILIZATION_INDI_ACT_FREQ;
 float act_dyn_discrete[INDI_NUM_ACT]; // will be computed from freq at init
 #endif
 
-#ifdef TEST_STAB_HEEWING
-bool test_stab_switch = TEST_STAB_HEEWING;
-#else
-bool test_stab_switch = false;
-#endif
-
-float test_thrust_control = 0.0;
-float test_thrustx_control = 0.0;
-struct FloatEulers esh_test_att_sp;
-float esh_test_heading;
 float thrust_estimated[3];
 
 /**
@@ -666,13 +656,6 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     v_thrust.y = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_Y);
     v_thrust.z = th_sp_to_incr_f(thrust, 0, THRUST_AXIS_Z);
 
-    #if 0
-    if (test_stab_switch) {
-    v_thrust.x = 0;
-    v_thrust.y = 0;
-    v_thrust.z = -0.06 * test_thrust_control;
-    }
-    #endif
     // Compute estimated thrust
     struct FloatVect3 thrust_filt = { 0.f, 0.f, 0.f };
     for (i = 0; i < INDI_NUM_ACT; i++) {
@@ -681,7 +664,6 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
 #if INDI_OUTPUTS == 5
       thrust_filt.x += Bwls[4][i]* actuator_lowpass_filters[i].o[0] * (int32_t) act_is_thruster_x[i];
       thrust_estimated[0] = thrust_filt.x;
-      //printf("thrust_filt.x: %f, thrust_filt.z: %f\n", thrust_filt.x, thrust_filt.z);
 #endif
     }
     // Add the current estimated thrust to the increment
@@ -704,14 +686,6 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
     }
     v_thrust.y = 0.f;
   }
-
-  #if 1
-  if (test_stab_switch) {
-    v_thrust.x = 0.1 * test_thrustx_control;
-    //v_thrust.y = 0;
-    v_thrust.z = -test_thrust_control;
-  }
-  #endif
 
   // This term compensates for the spinup torque in the yaw axis
   float g2_times_u = float_vect_dot_product(g2, indi_u, INDI_NUM_ACT)/INDI_G_SCALING;
@@ -775,13 +749,7 @@ void stabilization_indi_rate_run(bool in_flight, struct StabilizationSetpoint *s
   /*Commit the actuator command*/
   for (i = 0; i < INDI_NUM_ACT; i++) {
     actuators_pprz[i] = (int16_t) indi_u[i];
-    //printf("act %d: %d | ", i, actuators_pprz[i]);
-  }
-  //printf("\n");
-
-  //actuators_pprz[3]=8700;
-  //actuators_pprz[4]=test_thrust_control;
-  
+  }  
 
   //update thrust command such that the current is correctly estimated
   update_total_thrust(cmd);
@@ -841,17 +809,6 @@ void stabilization_indi_attitude_run(bool in_flight, struct StabilizationSetpoin
   struct FloatQuat att_err;
   struct FloatQuat *att_quat = stateGetNedToBodyQuat_f();
   struct FloatQuat quat_sp = stab_sp_to_quat_f(att_sp);
-
-  #if 1
-  if (test_stab_switch){
-    esh_test_att_sp.phi = 0;
-    esh_test_att_sp.theta = 0;
-    esh_test_att_sp.psi = esh_test_heading * M_PI / 180; 
-    float_quat_of_eulers_zxy(&quat_sp, &esh_test_att_sp);
-  }
-  #endif
-
-  float_eulers_of_quat(&esh_test_att_sp,&quat_sp);
 
   float_quat_inv_comp_norm_shortest(&att_err, att_quat, &quat_sp);
 

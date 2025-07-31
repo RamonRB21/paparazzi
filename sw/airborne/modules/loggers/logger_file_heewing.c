@@ -76,7 +76,6 @@ static void logger_file_write_header(FILE *file) {
   fprintf(file, "att_phi,att_theta,att_psi,");
   fprintf(file, "rate_p,rate_q,rate_r,");
   fprintf(file, "guid_thrust_x,guid_thrust_y,guid_thrust_z,guid_phi,guid_theta,guid_psi,");
-  fprintf(file, "phi_sp,theta_sp,psi_sp,thrust_z_sp,thrust_x_sp,");
   fprintf(file, "cmd_motor_right,cmd_motor_left,cmd_motor_back,cmd_mean_tilt,cmd_tilt_diff,cmd_ailerons,cmd_elevator,");
   fprintf(file, "G1_11,G1_12,G1_15,G1_16,G1_21,G1_22,G1_23,G1_24,G1_27,G1_31,G1_32,G1_35,G1_41,G1_42,G1_43,G1_44,G1_51,G1_52,G1_54\n");
 }
@@ -103,9 +102,6 @@ static void logger_file_write_row(FILE *file) {
     thrust_vect[0], thrust_vect[1],
     thrust_vect[2], guidance_euler_cmd.phi*180/M_PI,
     guidance_euler_cmd.theta*180/M_PI, guidance_euler_cmd.psi*180/M_PI);
-  fprintf(file, "%f,%f,%f,%f,%f,",
-    esh_test_att_sp.phi*180/M_PI, esh_test_att_sp.theta*180/M_PI,
-    esh_test_att_sp.psi*180/M_PI, indi_v[3], indi_v[4]);
   fprintf(file, "%d,%d,%d,%d,%d,%d,%d,",
     actuators_pprz[0], actuators_pprz[1],
     actuators_pprz[2], actuators_pprz[3],

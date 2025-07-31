@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 ENAC
+ * Copyright (C) 2025 Ramon Revilla Bouso <ramonrevilla21@gmail.com>
  *
  * This file is part of paparazzi.
  *
@@ -33,19 +33,6 @@
 extern void guidance_indi_tiltrotor_init(void);
 extern void guidance_indi_tiltrotor_propagate_filters(void);
 
-#ifndef GUIDANCE_INDI_MIN_PITCH
-#define GUIDANCE_INDI_MIN_PITCH -20
-#define GUIDANCE_INDI_MAX_PITCH 20
-#endif
-
-extern float gi_roll_eff_scaling;
 extern float gi_pitch_eff_scaling;
-extern float gi_lift_eff_scaling;
-extern float gi_thrust_eff_scaling;
-
-extern float wls_guid_roll;
-extern float wls_guid_pitch;
-extern float wls_guid_fz;
-extern float wls_guid_fx;
 
 #endif // GUIDANCE_INDI_HYBRID_TILTROTOR

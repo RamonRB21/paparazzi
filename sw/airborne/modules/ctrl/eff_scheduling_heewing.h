@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Ramon Revilla Bouso <>
+ * Copyright (C) 2025 Ramon Revilla Bouso <ramonrevilla21@gmail.com>
  *
  * This file is part of paparazzi
  *
@@ -36,12 +36,6 @@
 #define ESH_R 2 // Z body axis (angular acceleration)
 #define ESH_W 3 // Z body axis (linear acceleration) 
 #define ESH_U 4 // X body axis (linear acceleration)
-
-#define ESH_PHI 0 // Roll axis (linear acceleration) 
-#define ESH_THE 1 // Pitch axis (linear acceleration)
-#define ESH_PSI 2 // Yaw axis (linear acceleration)
-#define ESH_D   3 // Down axis (linear acceleration)
-#define ESH_N   4 // North axis (linear acceleration)
 
 #define ESH_CMD_MOTORR 0 // Motor Right
 #define ESH_CMD_MOTORL 1 // Motor Left
@@ -87,31 +81,6 @@ struct T1_attitude{
   };
 
 struct T1_Model{
-    float roll_eff_ail;
-    float pitch_eff_ele;
-    float pitch_eff_mb;
-    float yaw_eff_mr;
-    float yaw_eff_ml;
-    float yaw_eff_td;
-    float lift_eff_mr;
-    float lift_eff_ml;
-    float lift_eff_mb;
-    float lift_eff_mt;
-    float thrust_eff_mr;
-    float thrust_eff_ml;
-    float thrust_eff_mt;
-
-    float wls_roll;
-    float wls_pitch;
-    float wls_yaw;
-    float wls_lift;
-    float wls_thrust;
-    float wls_motors;
-    float wls_meant;
-    float wls_tdiff;
-
-    float wls_gamma_sq;
-
     float wls_min_mt;
 
     float I_XX;

@@ -215,17 +215,6 @@ static void guidance_indi_filter_thrust(void);
 #define GUIDANCE_INDI_COORDINATED_TURN_AIRSPEED_MARGIN 0.0
 #endif
 
-#ifdef TEST_GUID_HEEWING
-bool test_guid_switch = TEST_GUID_HEEWING;
-#else
-bool test_guid_switch = false;
-#endif
-
-float test_accelx_control = 0.0;
-float test_accely_control = 0.0;
-float test_accelz_control = 0.0;
-float test_heading_control = 0.0;
-
 float inv_eff[4];
 
 // Max bank angle in radians
@@ -268,7 +257,7 @@ float *Bwls_gih[GUIDANCE_INDI_HYBRID_V];
 struct WLS_t wls_guid_p = {
   .nu        = GUIDANCE_INDI_HYBRID_U,
   .nv        = GUIDANCE_INDI_HYBRID_V,
-  .gamma_sq  = 100000.0,
+  .gamma_sq  = 1000.0,
   .v         = {0.0},
 #ifdef GUIDANCE_INDI_WLS_PRIORITIES
   .Wv        =  GUIDANCE_INDI_WLS_PRIORITIES,
@@ -444,15 +433,6 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   // set global accel sp variable FIXME clean this
   sp_accel = *accel_sp;
 
-  #if 1
-  if (test_guid_switch) {
-    sp_accel.x = test_accelx_control;
-    sp_accel.y = test_accely_control;
-    sp_accel.z = test_accelz_control;
-    heading_sp = test_heading_control;
-  }
-  #endif
-
   /* Obtain eulers with zxy rotation order */
   float_eulers_of_quat_zxy(&eulers_zxy, stateGetNedToBodyQuat_f());
 
@@ -489,9 +469,6 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   Bound(a_diff.y, -6.0, 6.0);
   Bound(a_diff.z, -9.0, 9.0);
 
-  //printf("sp_accel:   X: %f | Y: %f | Z: %f\n", sp_accel.x, sp_accel.y, sp_accel.z);
-  //printf("accel_filt: X: %f | Y: %f | Z: %f\n", accel_filt.x, accel_filt.y, accel_filt.z);
-
   // If the thrust to specific force ratio has been defined, include vertical control
   // else ignore the vertical acceleration error
 #ifndef GUIDANCE_INDI_SPECIFIC_FORCE_GAIN
@@ -520,8 +497,6 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   euler_cmd.x = du_gih[0];
   euler_cmd.y = du_gih[1];
   euler_cmd.z = du_gih[2];
-
-  //printf("du_gih: ROLL: %f | PITCH: %f | FZ: %f | FX: %f\n", du_gih[0], du_gih[1], du_gih[2], du_gih[3]);
 
 #else
   // compute inverse matrix of Ga
@@ -589,26 +564,11 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
   // For experiments, it is possible to fix the heading to a different value.
   if (take_heading_control) {
     // heading is fixed by nav
-    guidance_euler_cmd.psi = heading_sp;
+    guidance_indi_hybrid_heading_sp = heading_sp;
   }
   else {
     // heading is free and controlled by guidance
     guidance_indi_hybrid_heading_sp += omega / PERIODIC_FREQUENCY;
-    #if 1
-    float airspeed = stateGetAirspeed_f();
-    if (airspeed < 10.0f) {
-    // heading points towards the hovering direction
-    struct NedCoor_f *groundspeed = stateGetSpeedNed_f();
-    float groundspeed_mag = sqrtf(groundspeed->x * groundspeed->x + groundspeed->y * groundspeed->y);
-    if (groundspeed_mag > 3.0f) {
-        float heading_sp = atan2f(groundspeed->y, groundspeed->x);
-    guidance_indi_hybrid_heading_sp = heading_sp;
-    } else {
-      // if we are not moving, fix heading at 0
-      guidance_indi_hybrid_heading_sp = eulers_zxy.psi;
-    }
-    }
-    #endif
     FLOAT_ANGLE_NORMALIZE(guidance_indi_hybrid_heading_sp);
     // limit heading setpoint to be within bounds of current heading
 #ifdef STABILIZATION_ATTITUDE_SP_PSI_DELTA_LIMIT
@@ -653,7 +613,6 @@ struct StabilizationSetpoint guidance_indi_run(struct FloatVect3 *accel_sp, floa
 #endif
   thrust_vect[1] = 0;
   thrust_vect[2] = euler_cmd.z;
-  //printf("thrust_vect_z: %f\n", thrust_vect[2]);
   // specific force not defined, return required increment
   thrust_sp = th_sp_from_incr_vect_f(thrust_vect);
 #endif
