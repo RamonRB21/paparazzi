@@ -51,20 +51,23 @@
     <block name="Standby" strip_button="Standby" strip_icon="home.png" group="home">
       <stay wp="STDBY"/>
     </block>
-    <block name="S1" strip_button="S1" group="home">
+    <block name="stay_S1" strip_button="S1" group="home">
       <stay wp="S1"/>
-      <deroute block="S2"/>
     </block>
-    <block name="S2" strip_button="S2" group="home">
+    <block name="stay_S2" strip_button="S2" group="home">
       <stay wp="S2"/>
-      <deroute block="S3"/>
     </block>
-    <block name="S3" strip_button="S3" group="home">
+    <block name="stay_S3" strip_button="S3" group="home">
       <stay wp="S3"/>
-      <deroute block="S4"/>
     </block>
-    <block name="S4" strip_button="S4" group="home">
+    <block name="stay_S4" strip_button="S4" group="home">
       <stay wp="S4"/>
+    </block>
+    <block name="route from S1">
+      <stay wp="S2" until="stage_time @GT 10"/>
+      <stay wp="S3" until="stage_time @GT 10"/>
+      <stay wp="S4" until="stage_time @GT 10"/>
+      <stay wp="S1"/>
     </block>
     <block name="Land Here" strip_button="Land Here" group="home">
      <call_once fun="NavSetWaypointHere(WP_TD)"/>
